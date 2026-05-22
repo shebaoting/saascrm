@@ -309,11 +309,42 @@ class CustomerResource extends Resource
                                 ->all())
                             ->searchable()
                             ->required(),
+                        Select::make('phone')
+                            ->label('电话保留')
+                            ->options(['target' => '保留目标客户', 'source' => '保留当前客户'])
+                            ->default('target'),
+                        Select::make('email')
+                            ->label('邮箱保留')
+                            ->options(['target' => '保留目标客户', 'source' => '保留当前客户'])
+                            ->default('target'),
+                        Select::make('website')
+                            ->label('网站保留')
+                            ->options(['target' => '保留目标客户', 'source' => '保留当前客户'])
+                            ->default('target'),
+                        Select::make('industry')
+                            ->label('行业保留')
+                            ->options(['target' => '保留目标客户', 'source' => '保留当前客户'])
+                            ->default('target'),
+                        Select::make('company_size')
+                            ->label('规模保留')
+                            ->options(['target' => '保留目标客户', 'source' => '保留当前客户'])
+                            ->default('target'),
+                        Select::make('registered_address')
+                            ->label('地址保留')
+                            ->options(['target' => '保留目标客户', 'source' => '保留当前客户'])
+                            ->default('target'),
                     ])
                     ->requiresConfirmation()
                     ->action(function (Customer $record, array $data): void {
                         $target = Customer::findOrFail($data['target_customer_id']);
-                        app(CustomerMergeService::class)->merge($record, $target);
+                        app(CustomerMergeService::class)->mergeWithFields($record, $target, [
+                            'phone' => $data['phone'] ?? 'target',
+                            'email' => $data['email'] ?? 'target',
+                            'website' => $data['website'] ?? 'target',
+                            'industry' => $data['industry'] ?? 'target',
+                            'company_size' => $data['company_size'] ?? 'target',
+                            'registered_address' => $data['registered_address'] ?? 'target',
+                        ]);
 
                         Notification::make()->success()->title('客户已合并')->send();
                     }),

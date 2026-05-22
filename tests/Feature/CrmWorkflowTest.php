@@ -6,8 +6,10 @@ use App\Filament\Clusters\LeadCenter\Resources\Leads\LeadResource;
 use App\Models\CustomField;
 use App\Models\AutomationAction;
 use App\Models\AutomationRule;
+use App\Models\Attachment;
 use App\Models\Contact;
 use App\Models\Customer;
+use App\Models\DuplicateRecord;
 use App\Models\Lead;
 use App\Models\Opportunity;
 use App\Models\Order;
@@ -33,6 +35,7 @@ use App\Services\Crm\LeadConversionService;
 use App\Services\Crm\OpportunityStageService;
 use App\Services\Crm\QuotePdfService;
 use App\Services\Crm\QuoteToOrderService;
+use App\Services\Crm\QuoteVersionService;
 use App\Support\Filament\CustomFieldUi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -505,6 +508,217 @@ class CrmWorkflowTest extends TestCase
         $this->assertEquals('3000.00', $plan->refresh()->received_amount);
         $this->assertSame('paid', $plan->status);
         $this->assertSame('partial_paid', $order->refresh()->payment_status);
+    }
+
+    public function test_quote_versions_expire_old_versions_and_only_one_version_can_convert(): void
+    {
+        $user = $this->user();
+        $tenant = $this->tenant($user);
+        $this->actingAs($user);
+
+        $pipeline = Pipeline::create([
+            'tenant_id' => $tenant->id,
+            'name' => '默认管道',
+            'is_default' => true,
+            'is_active' => true,
+        ]);
+
+        $stage = $pipeline->stages()->create([
+            'tenant_id' => $tenant->id,
+            'name' => '报价',
+            'probability' => 60,
+            'stage_type' => 'open',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        $customer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'name' => '版本客户',
+            'customer_type' => 'company',
+            'lifecycle_stage' => 'active',
+            'owner_user_id' => $user->id,
+        ]);
+
+        $opportunity = Opportunity::create([
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'pipeline_id' => $pipeline->id,
+            'pipeline_stage_id' => $stage->id,
+            'name' => '版本商机',
+            'amount' => 1000,
+            'probability' => 60,
+            'forecast_category' => 'pipeline',
+            'responsible_user_id' => $user->id,
+        ]);
+
+        $group = ProductGroup::create(['tenant_id' => $tenant->id, 'name' => '服务']);
+        $product = Product::create(['tenant_id' => $tenant->id, 'group_id' => $group->id, 'name' => '版本服务', 'tax_rate' => 6]);
+        $sku = ProductSku::create([
+            'tenant_id' => $tenant->id,
+            'product_id' => $product->id,
+            'sku_code' => 'VER-001',
+            'price' => 1000,
+            'cost_price' => 300,
+            'stock' => 10,
+            'is_active' => true,
+        ]);
+
+        $quoteV1 = Quote::create([
+            'tenant_id' => $tenant->id,
+            'quote_number' => 'QT-VERSION',
+            'title' => '版本报价',
+            'customer_id' => $customer->id,
+            'opportunity_id' => $opportunity->id,
+            'user_id' => $user->id,
+            'status' => 'approved',
+        ]);
+
+        QuoteItem::create([
+            'tenant_id' => $tenant->id,
+            'quote_id' => $quoteV1->id,
+            'product_id' => $product->id,
+            'product_sku_id' => $sku->id,
+            'quantity' => 1,
+        ]);
+
+        $quoteV2 = app(QuoteVersionService::class)->createNewVersion($quoteV1);
+
+        $this->assertSame(2, $quoteV2->version);
+        $this->assertSame('expired', $quoteV1->refresh()->status);
+        $this->assertSame($quoteV1->id, $quoteV2->source_quote_id);
+        $this->assertCount(1, $quoteV2->items);
+
+        $quoteV2->forceFill(['status' => 'approved'])->save();
+        app(QuoteToOrderService::class)->convert($quoteV2->refresh());
+
+        $this->assertSame('accepted', $quoteV2->refresh()->status);
+
+        $quoteV3 = Quote::create([
+            'tenant_id' => $tenant->id,
+            'quote_number' => 'QT-VERSION-V3',
+            'version' => 3,
+            'source_quote_id' => $quoteV1->id,
+            'title' => '版本报价 V3',
+            'customer_id' => $customer->id,
+            'opportunity_id' => $opportunity->id,
+            'user_id' => $user->id,
+            'status' => 'approved',
+        ]);
+
+        try {
+            app(QuoteToOrderService::class)->convert($quoteV3);
+            $this->fail('同一商机已有接受报价时，其他版本不能转订单。');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString('已有已接受报价', collect($exception->errors())->flatten()->join(' '));
+        }
+    }
+
+    public function test_import_duplicate_phone_goes_to_duplicate_pool(): void
+    {
+        $user = $this->user();
+        $tenant = $this->tenant($user);
+
+        Lead::create([
+            'tenant_id' => $tenant->id,
+            'company_name' => '重复线索',
+            'phone' => '13800000000',
+        ]);
+
+        Storage::fake('local');
+        Storage::disk('local')->put('imports/leads.csv', "company_name,phone\n新重复,138 0000 0000\n");
+
+        $import = app(DataPortService::class)->import($tenant->id, $user, 'leads', 'imports/leads.csv');
+
+        $this->assertSame(1, $import->processed_rows);
+        $this->assertSame(0, $import->successful_rows);
+        $this->assertDatabaseHas('duplicate_records', [
+            'tenant_id' => $tenant->id,
+            'target_type' => 'lead',
+            'matched_type' => 'lead',
+            'field_name' => 'phone',
+            'field_value' => '13800000000',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_customer_merge_can_keep_selected_conflicting_fields(): void
+    {
+        $user = $this->user();
+        $tenant = $this->tenant($user);
+        $this->actingAs($user);
+
+        $source = Customer::create([
+            'tenant_id' => $tenant->id,
+            'name' => '来源客户',
+            'customer_type' => 'company',
+            'lifecycle_stage' => 'active',
+            'phone' => '13800000001',
+            'email' => 'source@example.com',
+        ]);
+
+        $target = Customer::create([
+            'tenant_id' => $tenant->id,
+            'name' => '目标客户',
+            'customer_type' => 'company',
+            'lifecycle_stage' => 'active',
+            'phone' => '13800000002',
+            'email' => 'target@example.com',
+        ]);
+
+        $preview = app(CustomerMergeService::class)->preview($source, $target);
+        $this->assertTrue($preview['fields']['phone']['conflict']);
+
+        $merged = app(CustomerMergeService::class)->mergeWithFields($source, $target, [
+            'phone' => 'source',
+            'email' => 'target',
+        ]);
+
+        $this->assertSame('13800000001', $merged->phone);
+        $this->assertSame('target@example.com', $merged->email);
+        $this->assertSoftDeleted('customers', ['id' => $source->id]);
+    }
+
+    public function test_order_attachments_are_grouped_by_business_category(): void
+    {
+        $user = $this->user();
+        $tenant = $this->tenant($user);
+
+        $customer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'name' => '附件客户',
+            'customer_type' => 'company',
+            'lifecycle_stage' => 'active',
+        ]);
+
+        $order = Order::create([
+            'tenant_id' => $tenant->id,
+            'order_number' => 'SO-ATTACH',
+            'customer_id' => $customer->id,
+            'total_amount' => 1000,
+            'order_source' => 'sales_entry',
+            'order_status' => 'confirmed',
+            'payment_status' => 'unpaid',
+            'ordered_at' => now(),
+        ]);
+
+        foreach (['contract', 'payment_voucher', 'expense_voucher'] as $category) {
+            Attachment::create([
+                'tenant_id' => $tenant->id,
+                'path' => 'tenants/'.$tenant->id.'/orders/'.$category.'.pdf',
+                'disk' => 'local',
+                'user_id' => $user->id,
+                'model_type' => Order::class,
+                'model_id' => $order->id,
+                'category' => $category,
+                'name' => $category,
+            ]);
+        }
+
+        $this->assertSame(
+            ['contract', 'expense_voucher', 'payment_voucher'],
+            $order->attachments()->pluck('category')->sort()->values()->all(),
+        );
     }
 
     public function test_resource_query_respects_self_data_scope(): void

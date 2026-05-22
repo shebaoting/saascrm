@@ -20,6 +20,7 @@ use App\Models\QuoteApprovalRequest;
 use App\Models\QuoteItem;
 use App\Services\Crm\ActivityService;
 use App\Services\Crm\AutomationService;
+use App\Services\Crm\DuplicateDetectionService;
 use App\Services\Crm\OrderFinanceService;
 use App\Services\Crm\PlanLimitService;
 use App\Services\Crm\QuoteCalculatorService;
@@ -100,6 +101,7 @@ class AppServiceProvider extends ServiceProvider
         Lead::saving(fn (Lead $lead): bool => $this->normalizeContactFields($lead));
 
         Lead::creating(function (Lead $lead): void {
+            app(DuplicateDetectionService::class)->assertNoDuplicateOnCreate($lead);
             app(PlanLimitService::class)->assertCanCreate($lead, $lead->tenant);
         });
 
@@ -110,6 +112,7 @@ class AppServiceProvider extends ServiceProvider
         Customer::saving(fn (Customer $customer): bool => $this->normalizeContactFields($customer));
 
         Customer::creating(function (Customer $customer): void {
+            app(DuplicateDetectionService::class)->assertNoDuplicateOnCreate($customer);
             app(PlanLimitService::class)->assertCanCreate($customer, $customer->tenant);
         });
 

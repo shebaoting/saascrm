@@ -6,6 +6,7 @@ use App\Filament\Clusters\SystemSettings\Resources\Attachments\Pages\ManageAttac
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Attachment;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -75,6 +76,8 @@ class AttachmentResource extends Resource
                 TextInput::make('model_id')
                     ->required()
                     ->numeric(),
+                Select::make('category')
+                    ->options(CrmUi::options('attachment.category')),
                 TextInput::make('name'),
                 TextInput::make('mime_type'),
                 TextInput::make('extension'),
@@ -106,6 +109,8 @@ class AttachmentResource extends Resource
                 TextEntry::make('model_type'),
                 TextEntry::make('model_id')
                     ->numeric(),
+                TextEntry::make('category')
+                    ->placeholder('-'),
                 TextEntry::make('name')
                     ->placeholder('-'),
                 TextEntry::make('mime_type')
@@ -148,6 +153,8 @@ class AttachmentResource extends Resource
                 TextColumn::make('model_id')
                     ->numeric()
                     ->sortable(),
+                TextColumn::make('category')
+                    ->searchable(),
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('mime_type')

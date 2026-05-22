@@ -15,24 +15,30 @@ class LeadConversionService
     public function convert(Lead $lead, bool $createOpportunity = false, ?string $opportunityName = null): Customer
     {
         return DB::transaction(function () use ($lead, $createOpportunity, $opportunityName): Customer {
-            $customer = Customer::create([
-                'tenant_id' => $lead->tenant_id,
-                'name' => $lead->company_name ?: $lead->contact_name ?: '未命名客户',
-                'short_name' => $lead->company_name,
-                'customer_type' => $lead->company_name ? 'company' : 'person',
-                'lifecycle_stage' => 'new',
-                'owner_user_id' => $lead->owner_user_id ?: Auth::id(),
-                'source' => $lead->source,
-                'tags' => $lead->tags,
-                'country_code' => $lead->country_code,
-                'area_id' => $lead->area_id,
-                'email' => $lead->email,
-                'phone' => $lead->phone,
-                'registered_address' => $lead->address,
-                'last_activity_at' => $lead->last_activity_at,
-                'next_activity_at' => $lead->next_activity_at,
-                'custom_fields' => $lead->custom_fields,
-            ]);
+            app()->instance('crm.skip_duplicate_detection', true);
+
+            try {
+                $customer = Customer::create([
+                    'tenant_id' => $lead->tenant_id,
+                    'name' => $lead->company_name ?: $lead->contact_name ?: '未命名客户',
+                    'short_name' => $lead->company_name,
+                    'customer_type' => $lead->company_name ? 'company' : 'person',
+                    'lifecycle_stage' => 'new',
+                    'owner_user_id' => $lead->owner_user_id ?: Auth::id(),
+                    'source' => $lead->source,
+                    'tags' => $lead->tags,
+                    'country_code' => $lead->country_code,
+                    'area_id' => $lead->area_id,
+                    'email' => $lead->email,
+                    'phone' => $lead->phone,
+                    'registered_address' => $lead->address,
+                    'last_activity_at' => $lead->last_activity_at,
+                    'next_activity_at' => $lead->next_activity_at,
+                    'custom_fields' => $lead->custom_fields,
+                ]);
+            } finally {
+                app()->forgetInstance('crm.skip_duplicate_detection');
+            }
 
             if ($lead->contact_name || $lead->phone || $lead->email) {
                 Contact::create([

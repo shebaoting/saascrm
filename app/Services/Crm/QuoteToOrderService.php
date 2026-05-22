@@ -3,11 +3,13 @@
 namespace App\Services\Crm;
 
 use App\Models\Order;
+use App\Models\Notification as CrmNotification;
 use App\Models\Quote;
 use App\Models\QuoteApprovalRequest;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class QuoteToOrderService
@@ -64,6 +66,18 @@ class QuoteToOrderService
                 'accepted_at' => now(),
             ])->save();
 
+            if ($quote->opportunity_id) {
+                Quote::query()
+                    ->where('tenant_id', $quote->tenant_id)
+                    ->where('opportunity_id', $quote->opportunity_id)
+                    ->whereKeyNot($quote->id)
+                    ->where('status', '!=', 'accepted')
+                    ->update([
+                        'status' => 'expired',
+                        'superseded_at' => now(),
+                    ]);
+            }
+
             $quote->customer()->update([
                 'lifecycle_stage' => 'won',
                 'first_order_at' => $quote->customer?->first_order_at ?: now(),
@@ -76,6 +90,23 @@ class QuoteToOrderService
 
     private function ensureApprovalSatisfied(Quote $quote): void
     {
+        if (in_array($quote->status, ['pending_approval', 'rejected', 'expired'], true)) {
+            throw ValidationException::withMessages([
+                'quote_id' => '当前报价状态为「'.$quote->status.'」，不能直接转订单。',
+            ]);
+        }
+
+        if ($quote->opportunity_id && Quote::query()
+            ->where('tenant_id', $quote->tenant_id)
+            ->where('opportunity_id', $quote->opportunity_id)
+            ->where('status', 'accepted')
+            ->whereKeyNot($quote->id)
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'quote_id' => '该商机已有已接受报价，其他版本不能再转订单。',
+            ]);
+        }
+
         $reasons = $this->approvalReasons($quote);
 
         if ($reasons === [] || $quote->status === 'approved') {
@@ -88,7 +119,7 @@ class QuoteToOrderService
             ->first();
 
         if (! $approval) {
-            QuoteApprovalRequest::create([
+            $approval = QuoteApprovalRequest::create([
                 'tenant_id' => $quote->tenant_id,
                 'quote_id' => $quote->id,
                 'requested_by' => Auth::id() ?: $quote->user_id,
@@ -97,6 +128,8 @@ class QuoteToOrderService
                 'reason' => implode('；', $reasons),
                 'requested_at' => now(),
             ]);
+
+            $this->notifyApprover($quote, $approval);
         }
 
         $quote->forceFill(['status' => 'pending_approval'])->save();
@@ -137,6 +170,29 @@ class QuoteToOrderService
             ->first();
 
         return is_array($setting?->value) ? $setting->value : [];
+    }
+
+    private function notifyApprover(Quote $quote, QuoteApprovalRequest $approval): void
+    {
+        if (! $approval->approver_id) {
+            return;
+        }
+
+        CrmNotification::create([
+            'id' => (string) Str::uuid(),
+            'tenant_id' => $quote->tenant_id,
+            'type' => 'quote_approval_requested',
+            'notifiable_type' => \App\Models\User::class,
+            'notifiable_id' => $approval->approver_id,
+            'data' => json_encode([
+                'title' => '新的报价审批',
+                'body' => $quote->quote_number.' 需要审批',
+                'record_type' => Quote::class,
+                'record_id' => $quote->id,
+            ], JSON_UNESCAPED_UNICODE),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function nextOrderNumber(int $tenantId): string

@@ -6,12 +6,14 @@ use App\Filament\Clusters\SalesProcess\Resources\Quotes\Pages\ManageQuotes;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Contact;
+use App\Models\Notification as CrmNotification;
 use App\Models\Quote;
 use App\Models\QuoteApprovalRequest;
 use App\Models\User;
 use App\Services\Crm\QuoteCalculatorService;
 use App\Services\Crm\QuotePdfService;
 use App\Services\Crm\QuoteToOrderService;
+use App\Services\Crm\QuoteVersionService;
 use App\Support\CrmAccess;
 use App\Support\Filament\CustomFieldUi;
 use App\Support\Filament\CrmUi;
@@ -45,6 +47,7 @@ use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class QuoteResource extends Resource
@@ -80,6 +83,10 @@ class QuoteResource extends Resource
                     ->required()
                     ->numeric()
                     ->default(1),
+                Select::make('source_quote_id')
+                    ->relationship('sourceQuote', 'quote_number')
+                    ->disabled()
+                    ->dehydrated(false),
                 TextInput::make('title')
                     ->required(),
                 Select::make('customer_id')
@@ -193,6 +200,8 @@ class QuoteResource extends Resource
                 TextEntry::make('quote_number'),
                 TextEntry::make('version')
                     ->numeric(),
+                TextEntry::make('sourceQuote.quote_number')
+                    ->placeholder('-'),
                 TextEntry::make('title'),
                 TextEntry::make('customer.name')
                     ->label('客户'),
@@ -257,6 +266,8 @@ class QuoteResource extends Resource
                 TextColumn::make('version')
                     ->numeric()
                     ->sortable(),
+                TextColumn::make('sourceQuote.quote_number')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('title')
                     ->searchable(),
                 TextColumn::make('customer.name')
@@ -319,6 +330,16 @@ class QuoteResource extends Resource
 
                         Notification::make()->success()->title('报价金额已重算')->send();
                     }),
+                Action::make('new_version')
+                    ->label('复制新版本')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->visible(fn (Quote $record): bool => CrmAccess::hasPermission('quote.create') && $record->status !== 'accepted')
+                    ->requiresConfirmation()
+                    ->action(function (Quote $record): void {
+                        $newQuote = app(QuoteVersionService::class)->createNewVersion($record);
+
+                        Notification::make()->success()->title('已生成 V'.$newQuote->version.' 报价')->send();
+                    }),
                 Action::make('request_approval')
                     ->label('提交审批')
                     ->icon('heroicon-o-paper-airplane')
@@ -336,7 +357,7 @@ class QuoteResource extends Resource
                             ->maxLength(1000),
                     ])
                     ->action(function (Quote $record, array $data): void {
-                        QuoteApprovalRequest::create([
+                        $approval = QuoteApprovalRequest::create([
                             'tenant_id' => $record->tenant_id,
                             'quote_id' => $record->id,
                             'requested_by' => auth()->id(),
@@ -347,6 +368,24 @@ class QuoteResource extends Resource
                         ]);
 
                         $record->forceFill(['status' => 'pending_approval'])->save();
+
+                        if ($approval->approver_id) {
+                            CrmNotification::create([
+                                'id' => (string) Str::uuid(),
+                                'tenant_id' => $record->tenant_id,
+                                'type' => 'quote_approval_requested',
+                                'notifiable_type' => User::class,
+                                'notifiable_id' => $approval->approver_id,
+                                'data' => json_encode([
+                                    'title' => '新的报价审批',
+                                    'body' => $record->quote_number.' 需要审批',
+                                    'record_type' => Quote::class,
+                                    'record_id' => $record->id,
+                                ], JSON_UNESCAPED_UNICODE),
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
 
                         Notification::make()->success()->title('报价已提交审批')->send();
                     }),

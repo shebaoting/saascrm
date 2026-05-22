@@ -24,6 +24,8 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -173,6 +175,29 @@ class OrderResource extends Resource
                     ->columns(4)
                     ->columnSpanFull()
                     ->addActionLabel('添加收款计划'),
+                Repeater::make('attachments')
+                    ->label('合同和凭证')
+                    ->relationship('attachments')
+                    ->schema([
+                        Select::make('category')
+                            ->options(CrmUi::options('attachment.category'))
+                            ->default('contract')
+                            ->required(),
+                        FileUpload::make('path')
+                            ->disk('local')
+                            ->directory(fn (): string => 'tenants/'.CrmAccess::tenantId().'/orders/attachments')
+                            ->downloadable()
+                            ->openable()
+                            ->required(),
+                        TextInput::make('name'),
+                        Hidden::make('disk')
+                            ->default('local'),
+                        Hidden::make('user_id')
+                            ->default(fn (): ?int => auth()->id()),
+                    ])
+                    ->columns(3)
+                    ->columnSpanFull()
+                    ->addActionLabel('添加合同/凭证'),
                 DateTimePicker::make('ordered_at')
                     ->required(),
                 DateTimePicker::make('completed_at'),
@@ -236,6 +261,18 @@ class OrderResource extends Resource
                             ->placeholder('-'),
                     ])
                     ->columns(5)
+                    ->columnSpanFull(),
+                RepeatableEntry::make('attachments')
+                    ->label('合同和凭证')
+                    ->schema([
+                        TextEntry::make('category')
+                            ->formatStateUsing(fn (mixed $state): ?string => CrmUi::options('attachment.category')[$state] ?? $state),
+                        TextEntry::make('name')
+                            ->placeholder('-'),
+                        TextEntry::make('path')
+                            ->placeholder('-'),
+                    ])
+                    ->columns(3)
                     ->columnSpanFull(),
                 TextEntry::make('ordered_at')
                     ->dateTime(),

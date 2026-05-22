@@ -21,6 +21,7 @@ class Quote extends TenantModel
         'valid_until' => 'date',
         'custom_fields' => 'array',
         'accepted_at' => 'datetime',
+        'superseded_at' => 'datetime',
     ];
 
     public function customer(): BelongsTo
@@ -36,6 +37,11 @@ class Quote extends TenantModel
     public function opportunity(): BelongsTo
     {
         return $this->belongsTo(Opportunity::class);
+    }
+
+    public function sourceQuote(): BelongsTo
+    {
+        return $this->belongsTo(Quote::class, 'source_quote_id');
     }
 
     public function creator(): BelongsTo
@@ -61,5 +67,10 @@ class Quote extends TenantModel
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function versions(): HasMany
+    {
+        return $this->hasMany(Quote::class, 'source_quote_id');
     }
 }

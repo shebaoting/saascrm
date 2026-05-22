@@ -10,19 +10,58 @@ use Illuminate\Validation\ValidationException;
 
 class CustomerMergeService
 {
+    /**
+     * @return array<string, mixed>
+     */
+    public function preview(Customer $source, Customer $target): array
+    {
+        $this->assertCanMerge($source, $target);
+
+        $fields = collect($this->mergeableFields())
+            ->mapWithKeys(fn (string $field): array => [
+                $field => [
+                    'source' => $source->{$field},
+                    'target' => $target->{$field},
+                    'recommended' => blank($target->{$field}) && filled($source->{$field}) ? 'source' : 'target',
+                    'conflict' => filled($source->{$field}) && filled($target->{$field}) && $source->{$field} !== $target->{$field},
+                ],
+            ])
+            ->all();
+
+        return [
+            'fields' => $fields,
+            'relations' => [
+                'contacts' => $source->contacts()->count(),
+                'activities' => $source->activities()->count(),
+                'tasks' => $source->tasks()->count(),
+                'opportunities' => $source->opportunities()->count(),
+                'quotes' => $source->quotes()->count(),
+                'orders' => $source->orders()->count(),
+            ],
+        ];
+    }
+
     public function merge(Customer $source, Customer $target): Customer
     {
-        if ($source->tenant_id !== $target->tenant_id || $source->is($target)) {
-            throw ValidationException::withMessages([
-                'target_customer_id' => '请选择同一租户下的另一个客户。',
-            ]);
-        }
+        $choices = collect($this->preview($source, $target)['fields'])
+            ->mapWithKeys(fn (array $meta, string $field): array => [$field => $meta['recommended']])
+            ->all();
 
-        return DB::transaction(function () use ($source, $target): Customer {
+        return $this->mergeWithFields($source, $target, $choices);
+    }
+
+    /**
+     * @param  array<string, string>  $fieldChoices
+     */
+    public function mergeWithFields(Customer $source, Customer $target, array $fieldChoices): Customer
+    {
+        $this->assertCanMerge($source, $target);
+
+        return DB::transaction(function () use ($source, $target, $fieldChoices): Customer {
             $changedFields = [];
 
-            foreach (['phone', 'email', 'website', 'industry', 'company_size', 'registered_address'] as $field) {
-                if (blank($target->{$field}) && filled($source->{$field})) {
+            foreach ($this->mergeableFields() as $field) {
+                if (($fieldChoices[$field] ?? 'target') === 'source' && filled($source->{$field})) {
                     $target->{$field} = $source->{$field};
                     $changedFields[$field] = $source->{$field};
                 }
@@ -52,5 +91,22 @@ class CustomerMergeService
 
             return $target->refresh();
         });
+    }
+
+    private function assertCanMerge(Customer $source, Customer $target): void
+    {
+        if ($source->tenant_id !== $target->tenant_id || $source->is($target)) {
+            throw ValidationException::withMessages([
+                'target_customer_id' => '请选择同一租户下的另一个客户。',
+            ]);
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function mergeableFields(): array
+    {
+        return ['phone', 'email', 'website', 'industry', 'company_size', 'registered_address'];
     }
 }

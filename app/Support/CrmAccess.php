@@ -14,6 +14,7 @@ use App\Models\CustomerTransferHistory;
 use App\Models\CustomField;
 use App\Models\CustomFieldLayout;
 use App\Models\Department;
+use App\Models\DuplicateRecord;
 use App\Models\Export;
 use App\Models\FailedImportRow;
 use App\Models\Import;
@@ -451,7 +452,7 @@ class CrmAccess
             Payment::class, OrderExpense::class => 'payment',
             ProductGroup::class, Product::class, ProductSku::class, PriceBook::class, PriceBookItem::class => 'product',
             KbCategory::class, KbArticle::class => 'knowledge',
-            Setting::class, Department::class, Role::class, TenantInvitation::class, CustomField::class, CustomFieldLayout::class, Import::class, Export::class, FailedImportRow::class, Attachment::class, AutomationRule::class, AutomationAction::class => 'settings',
+            Setting::class, Department::class, Role::class, TenantInvitation::class, CustomField::class, CustomFieldLayout::class, DuplicateRecord::class, Import::class, Export::class, FailedImportRow::class, Attachment::class, AutomationRule::class, AutomationAction::class => 'settings',
             User::class => 'settings',
             default => str(class_basename($modelClass))->snake()->toString(),
         };

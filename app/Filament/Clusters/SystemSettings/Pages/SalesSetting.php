@@ -9,8 +9,14 @@ use App\Filament\Clusters\SalesProcess\Resources\Pipelines\PipelineResource;
 use App\Filament\Clusters\SalesProcess\Resources\PipelineStages\PipelineStageResource;
 use App\Filament\Clusters\SystemSettings\Resources\AutomationRules\AutomationRuleResource;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Models\Setting;
+use App\Models\User;
+use App\Support\CrmAccess;
 use App\Support\CrmMetrics;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
 class SalesSetting extends Page
@@ -57,6 +63,43 @@ class SalesSetting extends Page
                 ->label('自动化规则')
                 ->icon('heroicon-o-bolt')
                 ->url(AutomationRuleResource::getUrl()),
+            Action::make('quote_approval_rules')
+                ->label('报价审批规则')
+                ->icon('heroicon-o-shield-check')
+                ->fillForm(function (): array {
+                    $value = Setting::query()
+                        ->where('tenant_id', CrmAccess::tenantId())
+                        ->where('key', 'quote_approval_rules')
+                        ->value('value');
+
+                    return is_array($value) ? $value : [];
+                })
+                ->form([
+                    TextInput::make('min_profit_margin')
+                        ->label('最低毛利率(%)')
+                        ->numeric(),
+                    TextInput::make('max_discount_rate')
+                        ->label('最高折扣率(%)')
+                        ->numeric(),
+                    TextInput::make('max_amount_without_approval')
+                        ->label('免审金额上限')
+                        ->numeric(),
+                    Select::make('approver_id')
+                        ->label('默认审批人')
+                        ->options(fn (): array => User::query()
+                            ->whereHas('tenants', fn ($query) => $query->whereKey(CrmAccess::tenantId()))
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->all()),
+                ])
+                ->action(function (array $data): void {
+                    Setting::updateOrCreate(
+                        ['tenant_id' => CrmAccess::tenantId(), 'key' => 'quote_approval_rules'],
+                        ['value' => array_filter($data, fn (mixed $value): bool => filled($value) || $value === 0 || $value === '0')],
+                    );
+
+                    Notification::make()->success()->title('报价审批规则已保存')->send();
+                }),
         ];
     }
 }
