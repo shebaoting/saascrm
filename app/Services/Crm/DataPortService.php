@@ -13,6 +13,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\ProductSku;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
@@ -54,6 +55,8 @@ class DataPortService
 
     public function import(int $tenantId, User $user, string $module, string $path): Import
     {
+        app(PlanLimitService::class)->assertCanImport(Tenant::findOrFail($tenantId));
+
         $import = Import::create([
             'tenant_id' => $tenantId,
             'file_name' => basename($path),
@@ -101,11 +104,28 @@ class DataPortService
 
         $import->forceFill(['completed_at' => now()])->save();
 
+        app(NotificationService::class)->send(
+            $tenantId,
+            $user->id,
+            'import_completed',
+            '导入完成',
+            '成功 '.$import->successful_rows.' 行，失败 '.($import->processed_rows - $import->successful_rows).' 行。',
+            $import,
+        );
+
+        app(AuditLogService::class)->record('data_imported', $import, null, [
+            'module' => $module,
+            'processed_rows' => $import->processed_rows,
+            'successful_rows' => $import->successful_rows,
+        ]);
+
         return $import->refresh();
     }
 
     public function export(int $tenantId, User $user, string $module): Export
     {
+        app(PlanLimitService::class)->assertCanExport(Tenant::findOrFail($tenantId));
+
         $rows = $this->exportRows($tenantId, $module);
         $fileName = $module.'-'.now()->format('YmdHis').'.csv';
         $path = 'tenants/'.$tenantId.'/exports/'.$fileName;
@@ -124,7 +144,7 @@ class DataPortService
         Storage::disk('local')->put($path, stream_get_contents($handle));
         fclose($handle);
 
-        return Export::create([
+        $export = Export::create([
             'tenant_id' => $tenantId,
             'file_disk' => 'local',
             'file_name' => $path,
@@ -135,6 +155,106 @@ class DataPortService
             'user_id' => $user->id,
             'completed_at' => now(),
         ]);
+
+        app(NotificationService::class)->send(
+            $tenantId,
+            $user->id,
+            'export_completed',
+            '导出完成',
+            "已生成 {$export->file_name}，共 {$export->total_rows} 行。",
+            $export,
+        );
+
+        app(AuditLogService::class)->record('data_exported', $export, null, [
+            'module' => $module,
+            'total_rows' => $export->total_rows,
+        ]);
+
+        return $export;
+    }
+
+    public function retryFailedRow(FailedImportRow $row, User $user): bool
+    {
+        $import = $row->import;
+
+        try {
+            $this->storeRow($row->tenant_id, $import->importer, $row->data ?: []);
+            $import->increment('successful_rows');
+            $row->delete();
+
+            app(AuditLogService::class)->record('failed_import_row_retried', $import, [
+                'failed_row_id' => $row->id,
+            ], [
+                'status' => 'success',
+                'user_id' => $user->id,
+            ]);
+
+            return true;
+        } catch (Throwable $exception) {
+            $row->forceFill([
+                'validation_error' => '重试失败：'.$exception->getMessage(),
+            ])->save();
+
+            return false;
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function templateHeaders(string $module): array
+    {
+        return match ($module) {
+            'leads' => ['公司名称', '联系人', '电话', '邮箱', '来源'],
+            'customers' => ['客户名称', '电话', '邮箱', '来源'],
+            'contacts' => ['客户名称', '联系人', '电话', '邮箱', '职位', '部门'],
+            'products' => ['商品分组', '商品名称', '税率'],
+            'product_skus' => ['商品名称', 'SKU编码', '价格', '成本', '库存'],
+            default => [],
+        };
+    }
+
+    public function createTemplate(int $tenantId, string $module): string
+    {
+        $path = 'tenants/'.$tenantId.'/imports/templates/'.$module.'-template.csv';
+        $handle = fopen('php://temp', 'w+');
+
+        fputcsv($handle, $this->templateHeaders($module));
+        rewind($handle);
+        Storage::disk('local')->put($path, stream_get_contents($handle));
+        fclose($handle);
+
+        return $path;
+    }
+
+    /**
+     * @return array{headers: array<int, string>, total_rows: int, missing_headers: array<int, string>}
+     */
+    public function precheck(string $module, string $path): array
+    {
+        $stream = Storage::disk('local')->readStream($path);
+        $headers = [];
+        $totalRows = 0;
+
+        while (($row = fgetcsv($stream)) !== false) {
+            if ($headers === []) {
+                $headers = array_map(fn (string $header): string => trim($header), $row);
+
+                continue;
+            }
+
+            $totalRows++;
+        }
+
+        if (is_resource($stream)) {
+            fclose($stream);
+        }
+
+        return [
+            'headers' => $headers,
+            'total_rows' => $totalRows,
+            'missing_headers' => array_values(array_diff($this->templateHeaders($module), $headers)),
+        ];
     }
 
     /**
@@ -219,7 +339,7 @@ class DataPortService
             'products' => Product::where('tenant_id', $tenantId)->get(['group_id', 'name', 'tax_rate', 'is_on_sale'])->toArray(),
             'product_skus' => ProductSku::where('tenant_id', $tenantId)->get(['product_id', 'sku_code', 'price', 'cost_price', 'stock', 'is_active'])->toArray(),
             'orders' => Order::where('tenant_id', $tenantId)->get(['order_number', 'customer_id', 'total_amount', 'payment_status', 'order_status'])->toArray(),
-            'payments' => Payment::where('tenant_id', $tenantId)->get(['order_id', 'amount', 'status', 'method', 'received_at'])->toArray(),
+            'payments' => Payment::where('tenant_id', $tenantId)->get(['order_id', 'amount', 'status', 'payment_method', 'received_at'])->toArray(),
             default => [],
         };
     }

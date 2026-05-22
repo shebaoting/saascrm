@@ -50,4 +50,9 @@ class Lead extends TenantModel
     {
         return $this->morphMany(Attachment::class, 'model');
     }
+
+    public function fieldHistories(): MorphMany
+    {
+        return $this->morphMany(FieldHistory::class, 'model');
+    }
 }

@@ -8,14 +8,17 @@ use App\Filament\Clusters\LeadCenter\Resources\LeadScoreRules\LeadScoreRuleResou
 use App\Filament\Clusters\SalesProcess\Resources\Pipelines\PipelineResource;
 use App\Filament\Clusters\SalesProcess\Resources\PipelineStages\PipelineStageResource;
 use App\Filament\Clusters\SystemSettings\Resources\AutomationRules\AutomationRuleResource;
+use App\Filament\Clusters\SystemSettings\Resources\BusinessNumberRules\BusinessNumberRuleResource;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Crm\PlanLimitService;
 use App\Support\CrmAccess;
 use App\Support\CrmMetrics;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
@@ -62,7 +65,58 @@ class SalesSetting extends Page
             Action::make('automation_rules')
                 ->label('自动化规则')
                 ->icon('heroicon-o-bolt')
+                ->disabled(fn (): bool => ! app(PlanLimitService::class)->hasFeature(CrmAccess::tenant(), 'automation'))
+                ->tooltip(fn (): ?string => app(PlanLimitService::class)->hasFeature(CrmAccess::tenant(), 'automation')
+                    ? null
+                    : '当前套餐不包含自动化规则，请升级后使用。')
                 ->url(AutomationRuleResource::getUrl()),
+            Action::make('business_number_rules')
+                ->label('编号规则')
+                ->icon('heroicon-o-hashtag')
+                ->url(BusinessNumberRuleResource::getUrl()),
+            Action::make('duplicate_rules')
+                ->label('重复规则')
+                ->icon('heroicon-o-finger-print')
+                ->fillForm(function (): array {
+                    $value = Setting::query()
+                        ->where('tenant_id', CrmAccess::tenantId())
+                        ->where('key', 'duplicate_rules')
+                        ->value('value');
+
+                    return [
+                        'phone_exact' => data_get($value, 'phone_exact', true),
+                        'email_exact' => data_get($value, 'email_exact', true),
+                        'company_name_fuzzy' => data_get($value, 'company_name_fuzzy', true),
+                        'unified_social_credit_code_exact' => data_get($value, 'unified_social_credit_code_exact', true),
+                    ];
+                })
+                ->form([
+                    Toggle::make('phone_exact')
+                        ->label('手机号精确匹配')
+                        ->default(true),
+                    Toggle::make('email_exact')
+                        ->label('邮箱精确匹配')
+                        ->default(true),
+                    Toggle::make('company_name_fuzzy')
+                        ->label('客户名称模糊匹配')
+                        ->default(true),
+                    Toggle::make('unified_social_credit_code_exact')
+                        ->label('统一社会信用代码精确匹配')
+                        ->default(true),
+                ])
+                ->action(function (array $data): void {
+                    Setting::updateOrCreate(
+                        ['tenant_id' => CrmAccess::tenantId(), 'key' => 'duplicate_rules'],
+                        ['value' => [
+                            'phone_exact' => (bool) ($data['phone_exact'] ?? false),
+                            'email_exact' => (bool) ($data['email_exact'] ?? false),
+                            'company_name_fuzzy' => (bool) ($data['company_name_fuzzy'] ?? false),
+                            'unified_social_credit_code_exact' => (bool) ($data['unified_social_credit_code_exact'] ?? false),
+                        ]],
+                    );
+
+                    Notification::make()->success()->title('重复规则已保存')->send();
+                }),
             Action::make('quote_approval_rules')
                 ->label('报价审批规则')
                 ->icon('heroicon-o-shield-check')

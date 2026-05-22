@@ -6,16 +6,20 @@ use App\Filament\Clusters\SystemSettings\Resources\AutomationRules\Pages\ManageA
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\AutomationRule;
+use App\Models\User;
+use App\Services\Crm\PlanLimitService;
+use App\Support\CrmAccess;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
@@ -45,11 +49,23 @@ class AutomationRuleResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
 
     protected static ?string $cluster = SystemSettingsCluster::class;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function canViewAny(): bool
+    {
+        return app(PlanLimitService::class)->hasFeature(CrmAccess::tenant(), 'automation')
+            && CrmAccess::canForModel(static::getModel(), 'viewAny');
+    }
+
+    public static function canCreate(): bool
+    {
+        return app(PlanLimitService::class)->hasFeature(CrmAccess::tenant(), 'automation')
+            && CrmAccess::canForModel(static::getModel(), 'create');
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -63,14 +79,69 @@ class AutomationRuleResource extends Resource
                 Select::make('target_type')
                     ->options(CrmUi::options('target_type'))
                     ->required(),
-                Textarea::make('conditions')
-                    ->formatStateUsing(fn ($state): ?string => is_array($state) ? json_encode($state, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : $state)
-                    ->dehydrateStateUsing(function (?string $state): ?array {
-                        $decoded = blank($state) ? null : json_decode($state, true);
-
-                        return is_array($decoded) ? $decoded : null;
-                    }),
+                Repeater::make('conditions')
+                    ->label('条件')
+                    ->schema([
+                        Select::make('field')
+                            ->label('字段')
+                            ->options(static::conditionFieldOptions())
+                            ->required(),
+                        Select::make('operator')
+                            ->label('条件')
+                            ->options(static::operatorOptions())
+                            ->default('=')
+                            ->required(),
+                        TextInput::make('value')
+                            ->label('值'),
+                    ])
+                    ->columns(3)
+                    ->columnSpanFull()
+                    ->addActionLabel('添加条件'),
+                Repeater::make('actions')
+                    ->label('动作')
+                    ->relationship('actions')
+                    ->schema([
+                        Select::make('action_type')
+                            ->options(CrmUi::options('automation.action_type'))
+                            ->required(),
+                        Select::make('payload.assignee_id')
+                            ->label('负责人')
+                            ->options(fn (): array => User::query()
+                                ->whereHas('tenants', fn ($query) => $query->whereKey(CrmAccess::tenantId()))
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all())
+                            ->visible(fn ($get): bool => in_array($get('action_type'), ['create_task', 'assign_owner'], true)),
+                        Select::make('payload.user_id')
+                            ->label('通知对象')
+                            ->options(fn (): array => User::query()
+                                ->whereHas('tenants', fn ($query) => $query->whereKey(CrmAccess::tenantId()))
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all())
+                            ->visible(fn ($get): bool => $get('action_type') === 'send_notification'),
+                        TextInput::make('payload.title')
+                            ->label('标题')
+                            ->visible(fn ($get): bool => in_array($get('action_type'), ['create_task', 'send_notification'], true)),
+                        TextInput::make('payload.body')
+                            ->label('通知内容')
+                            ->visible(fn ($get): bool => $get('action_type') === 'send_notification'),
+                        TextInput::make('payload.due_days')
+                            ->label('截止天数')
+                            ->numeric()
+                            ->visible(fn ($get): bool => $get('action_type') === 'create_task'),
+                        TextInput::make('payload.reason')
+                            ->label('原因')
+                            ->visible(fn ($get): bool => $get('action_type') === 'move_to_pool'),
+                        TextInput::make('sort_order')
+                            ->numeric()
+                            ->default(0),
+                    ])
+                    ->columns(3)
+                    ->columnSpanFull()
+                    ->addActionLabel('添加动作'),
                 Toggle::make('is_active')
+                    ->default(true)
                     ->required(),
                 DateTimePicker::make('last_run_at'),
             ]);
@@ -126,6 +197,17 @@ class AutomationRuleResource extends Resource
                 //
             ])
             ->recordActions([
+                Action::make('test')
+                    ->label('测试')
+                    ->icon('heroicon-o-play')
+                    ->action(function (AutomationRule $record): void {
+                        $record->forceFill(['last_run_at' => now()])->save();
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('规则配置可用')
+                            ->body('条件和动作已保存，可在真实触发事件中执行。')
+                            ->send();
+                    }),
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
@@ -141,6 +223,31 @@ class AutomationRuleResource extends Resource
     {
         return [
             'index' => ManageAutomationRules::route('/'),
+        ];
+    }
+
+    public static function conditionFieldOptions(): array
+    {
+        return [
+            'source' => '来源',
+            'status' => '状态',
+            'owner_user_id' => '负责人',
+            'customer_type' => '客户类型',
+            'lifecycle_stage' => '客户阶段',
+            'forecast_category' => '预测分类',
+            'amount' => '金额',
+            'type' => '活动类型',
+        ];
+    }
+
+    public static function operatorOptions(): array
+    {
+        return [
+            '=' => '等于',
+            '!=' => '不等于',
+            'contains' => '包含',
+            'filled' => '已填写',
+            'blank' => '未填写',
         ];
     }
 }

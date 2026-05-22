@@ -8,6 +8,7 @@ use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Department;
 use App\Models\Role;
 use App\Models\TenantInvitation;
+use App\Support\CrmAccess;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -22,6 +23,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class TenantInvitationResource extends Resource
@@ -57,12 +59,22 @@ class TenantInvitationResource extends Resource
                     ->tel(),
                 Select::make('role_ids')
                     ->multiple()
-                    ->options(fn (): array => Role::query()->orderBy('name')->pluck('name', 'id')->all()),
+                    ->options(fn (): array => Role::query()
+                        ->where('tenant_id', CrmAccess::tenantId())
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all()),
                 Select::make('department_ids')
                     ->multiple()
-                    ->options(fn (): array => Department::query()->orderBy('name')->pluck('name', 'id')->all()),
+                    ->options(fn (): array => Department::query()
+                        ->where('tenant_id', CrmAccess::tenantId())
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all()),
                 TextInput::make('token')
-                    ->required(),
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->placeholder('保存后自动生成'),
                 Select::make('status')
                     ->options([
                         'pending' => '待接受',
@@ -78,7 +90,7 @@ class TenantInvitationResource extends Resource
                     ->required(),
                 DateTimePicker::make('accepted_at'),
                 DateTimePicker::make('expires_at')
-                    ->required(),
+                    ->default(fn () => now()->addDays(7)),
             ]);
     }
 
@@ -92,6 +104,10 @@ class TenantInvitationResource extends Resource
                 TextEntry::make('phone')
                     ->placeholder('-'),
                 TextEntry::make('token'),
+                TextEntry::make('invite_url')
+                    ->label('邀请链接')
+                    ->state(fn (TenantInvitation $record): string => route('tenant-invitations.show', $record->token))
+                    ->columnSpanFull(),
                 TextEntry::make('status'),
                 TextEntry::make('inviter.name'),
                 TextEntry::make('accepted_at')
@@ -119,7 +135,13 @@ class TenantInvitationResource extends Resource
                 TextColumn::make('phone')
                     ->searchable(),
                 TextColumn::make('token')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('invite_url')
+                    ->label('邀请链接')
+                    ->state(fn (TenantInvitation $record): string => route('tenant-invitations.show', $record->token))
+                    ->copyable()
+                    ->limit(36),
                 TextColumn::make('status')
                     ->searchable(),
                 TextColumn::make('inviter.name')
@@ -140,7 +162,13 @@ class TenantInvitationResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->options([
+                        'pending' => '待接受',
+                        'accepted' => '已接受',
+                        'expired' => '已过期',
+                        'cancelled' => '已取消',
+                    ]),
             ])
             ->recordActions([
                 ViewAction::make(),

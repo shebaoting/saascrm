@@ -65,6 +65,10 @@ class LeadResource extends Resource
     {
         return $schema
             ->components([
+                TextInput::make('lead_number')
+                    ->label('线索编号')
+                    ->disabled()
+                    ->dehydrated(false),
                 TextInput::make('company_name'),
                 TextInput::make('contact_name'),
                 TextInput::make('phone')
@@ -116,6 +120,9 @@ class LeadResource extends Resource
                 TextEntry::make('deleted_at')
                     ->dateTime()
                     ->visible(fn (Lead $record): bool => $record->trashed()),
+                TextEntry::make('lead_number')
+                    ->label('线索编号')
+                    ->placeholder('-'),
                 TextEntry::make('company_name')
                     ->placeholder('-'),
                 TextEntry::make('contact_name')
@@ -181,6 +188,10 @@ class LeadResource extends Resource
                 TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('lead_number')
+                    ->label('线索编号')
+                    ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('company_name')
                     ->searchable(),

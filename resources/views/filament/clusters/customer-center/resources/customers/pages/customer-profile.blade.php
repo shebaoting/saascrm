@@ -33,23 +33,36 @@
             @endforeach
         </div>
 
-        <div class="crm-profile-grid">
-            @if ($customFields->isNotEmpty())
-                <section class="crm-record-panel">
-                    <div class="crm-record-panel-title">扩展字段</div>
-                    <div class="crm-record-list">
-                        @foreach ($customFields as $field)
-                            <div class="crm-record-row">
-                                <div class="crm-record-name">{{ $field['label'] }}</div>
-                                <div class="crm-record-meta">{{ $field['value'] }}</div>
-                                <div class="crm-record-value"></div>
-                            </div>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
-
+        @if ($customFields->isNotEmpty())
             <section class="crm-record-panel">
+                <div class="crm-record-panel-title">扩展字段</div>
+                <div class="crm-record-list">
+                    @foreach ($customFields as $field)
+                        <div class="crm-record-row">
+                            <div class="crm-record-name">{{ $field['label'] }}</div>
+                            <div class="crm-record-meta">{{ $field['value'] }}</div>
+                            <div class="crm-record-value"></div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
+        <div class="crm-tab-bar" role="tablist">
+            @foreach ($tabs as $key => $tab)
+                <button
+                    type="button"
+                    wire:click="setTab('{{ $key }}')"
+                    class="crm-tab-button {{ $activeTab === $key ? 'is-active' : '' }}"
+                >
+                    <span>{{ $tab['label'] }}</span>
+                    <strong>{{ $tab['count'] }}</strong>
+                </button>
+            @endforeach
+        </div>
+
+        <section class="crm-record-panel crm-tab-panel">
+            @if ($activeTab === 'timeline')
                 <div class="crm-record-panel-title">活动时间线</div>
                 <div class="crm-record-list">
                     @forelse ($timeline as $activity)
@@ -62,9 +75,7 @@
                         <div class="crm-record-empty">暂无活动</div>
                     @endforelse
                 </div>
-            </section>
-
-            <section class="crm-record-panel">
+            @elseif ($activeTab === 'contacts')
                 <div class="crm-record-panel-title">联系人</div>
                 <div class="crm-record-list">
                     @forelse ($customer->contacts as $contact)
@@ -77,97 +88,107 @@
                         <div class="crm-record-empty">暂无联系人</div>
                     @endforelse
                 </div>
-            </section>
-
-            <section class="crm-record-panel">
+            @elseif ($activeTab === 'opportunities')
                 <div class="crm-record-panel-title">商机</div>
                 <div class="crm-record-list">
-                    @forelse ($customer->opportunities as $opportunity)
+                    @forelse ($customer->opportunities->sortByDesc('updated_at') as $opportunity)
                         <div class="crm-record-row">
                             <div class="crm-record-name">{{ $opportunity->name }}</div>
-                            <div class="crm-record-meta">{{ $opportunity->stage?->name ?: '-' }}</div>
+                            <div class="crm-record-meta">{{ $opportunity->stage?->name ?: '-' }} / {{ \App\Support\Filament\CrmUi::valueLabel('forecast_category', $opportunity->forecast_category, $opportunity) }}</div>
                             <div class="crm-record-value">¥{{ number_format((float) $opportunity->amount, 2) }}</div>
                         </div>
                     @empty
                         <div class="crm-record-empty">暂无商机</div>
                     @endforelse
                 </div>
-            </section>
-
-            <section class="crm-record-panel">
+            @elseif ($activeTab === 'quotes')
                 <div class="crm-record-panel-title">报价</div>
                 <div class="crm-record-list">
                     @forelse ($latestQuotes as $quote)
                         <div class="crm-record-row">
-                            <div class="crm-record-name">{{ $quote->quote_number }}</div>
-                            <div class="crm-record-meta">{{ \App\Support\Filament\CrmUi::valueLabel('status', $quote->status, $quote) }}</div>
+                            <div class="crm-record-name">{{ $quote->quote_number ?: $quote->title }}</div>
+                            <div class="crm-record-meta">V{{ $quote->version }} / {{ \App\Support\Filament\CrmUi::valueLabel('status', $quote->status, $quote) }}</div>
                             <div class="crm-record-value">¥{{ number_format((float) $quote->total_amount, 2) }}</div>
                         </div>
                     @empty
                         <div class="crm-record-empty">暂无报价</div>
                     @endforelse
                 </div>
-            </section>
-
-            <section class="crm-record-panel">
-                <div class="crm-record-panel-title">订单和回款</div>
+            @elseif ($activeTab === 'orders')
+                <div class="crm-record-panel-title">订单、收款与支出</div>
                 <div class="crm-record-list">
                     @forelse ($latestOrders as $order)
                         <div class="crm-record-row">
                             <div class="crm-record-name">{{ $order->order_number }}</div>
-                            <div class="crm-record-meta">{{ \App\Support\Filament\CrmUi::valueLabel('order_status', $order->order_status, $order) }} / {{ \App\Support\Filament\CrmUi::valueLabel('payment_status', $order->payment_status, $order) }}</div>
+                            <div class="crm-record-meta">
+                                {{ \App\Support\Filament\CrmUi::valueLabel('order_status', $order->order_status, $order) }}
+                                / 已收 ¥{{ number_format((float) $order->payments->where('status', 'completed')->sum('amount'), 2) }}
+                                / 支出 ¥{{ number_format((float) $order->expenses->sum('amount'), 2) }}
+                            </div>
                             <div class="crm-record-value">¥{{ number_format((float) $order->total_amount, 2) }}</div>
                         </div>
                     @empty
                         <div class="crm-record-empty">暂无订单</div>
                     @endforelse
                 </div>
-            </section>
-
-            <section class="crm-record-panel">
+            @elseif ($activeTab === 'tasks')
                 <div class="crm-record-panel-title">任务</div>
                 <div class="crm-record-list">
-                    @forelse ($customer->tasks->sortBy('due_at')->take(8) as $task)
+                    @forelse ($customer->tasks->sortBy('due_at')->take(20) as $task)
                         <div class="crm-record-row">
                             <div class="crm-record-name">{{ $task->title }}</div>
-                            <div class="crm-record-meta">{{ \App\Support\Filament\CrmUi::valueLabel('status', $task->status, $task) }} / {{ $task->assignee?->name ?: '-' }}</div>
+                            <div class="crm-record-meta">{{ \App\Support\Filament\CrmUi::valueLabel('task.status', $task->status, $task) }} / {{ $task->assignee?->name ?: '-' }}</div>
                             <div class="crm-record-value">{{ $task->due_at?->format('m-d H:i') ?: '-' }}</div>
                         </div>
                     @empty
                         <div class="crm-record-empty">暂无任务</div>
                     @endforelse
                 </div>
-            </section>
-
-            <section class="crm-record-panel">
+            @elseif ($activeTab === 'attachments')
                 <div class="crm-record-panel-title">附件</div>
                 <div class="crm-record-list">
                     @forelse ($customer->attachments as $attachment)
                         <div class="crm-record-row">
                             <div class="crm-record-name">{{ $attachment->name ?: basename($attachment->path) }}</div>
-                            <div class="crm-record-meta">{{ $attachment->mime_type ?: '-' }}</div>
+                            <div class="crm-record-meta">{{ \App\Support\Filament\CrmUi::valueLabel('category', $attachment->category, $attachment) }}</div>
                             <div class="crm-record-value">{{ $attachment->created_at?->format('Y-m-d') ?: '-' }}</div>
                         </div>
                     @empty
                         <div class="crm-record-empty">暂无附件</div>
                     @endforelse
                 </div>
-            </section>
-
-            <section class="crm-record-panel">
+            @elseif ($activeTab === 'history')
                 <div class="crm-record-panel-title">变更历史</div>
                 <div class="crm-record-list">
-                    @forelse ($customer->transferHistories->merge($customer->poolHistories)->sortByDesc('created_at')->take(8) as $history)
+                    @php
+                        $histories = $customer->transferHistories
+                            ->merge($customer->poolHistories)
+                            ->merge($customer->fieldHistories)
+                            ->sortByDesc('created_at')
+                            ->take(20);
+                    @endphp
+                    @forelse ($histories as $history)
                         <div class="crm-record-row">
-                            <div class="crm-record-name">{{ $history->reason ?: $history->action ?: '客户变更' }}</div>
-                            <div class="crm-record-meta">{{ $history instanceof \App\Models\CustomerPoolHistory ? '公海记录' : '转移记录' }}</div>
+                            @if ($history instanceof \App\Models\FieldHistory)
+                                @php
+                                    $oldValue = data_get($history->old_value, 'value', '-');
+                                    $newValue = data_get($history->new_value, 'value', '-');
+                                    $oldText = is_scalar($oldValue) ? $oldValue : json_encode($oldValue, JSON_UNESCAPED_UNICODE);
+                                    $newText = is_scalar($newValue) ? $newValue : json_encode($newValue, JSON_UNESCAPED_UNICODE);
+                                @endphp
+                                <div class="crm-record-name">{{ $history->field }}：{{ $oldText }} → {{ $newText }}</div>
+                                <div class="crm-record-meta">字段变更</div>
+                            @else
+                                <div class="crm-record-name">{{ $history->reason ?: $history->action ?: '客户变更' }}</div>
+                                <div class="crm-record-meta">{{ $history instanceof \App\Models\CustomerPoolHistory ? '公海记录' : '转移记录' }}</div>
+                            @endif
                             <div class="crm-record-value">{{ $history->created_at?->format('m-d H:i') ?: '-' }}</div>
                         </div>
                     @empty
                         <div class="crm-record-empty">暂无历史</div>
                     @endforelse
                 </div>
-            </section>
-        </div>
+            @endif
+        </section>
     </div>
 </x-filament-panels::page>

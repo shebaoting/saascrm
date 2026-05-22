@@ -5,8 +5,10 @@ namespace App\Services\Crm;
 use App\Models\Customer;
 use App\Models\DuplicateRecord;
 use App\Models\Lead;
+use App\Models\Setting;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -95,29 +97,41 @@ class DuplicateDetectionService
 
     private function candidateValues(Lead|Customer $record): array
     {
+        $rules = $this->rules((int) $record->tenant_id);
+
         if ($record instanceof Lead) {
-            return [
-                'phone' => $this->phone($record->phone),
-                'email' => $this->email($record->email),
-                'company_name' => $this->name($record->company_name),
-            ];
+            return array_filter([
+                'phone' => $rules['phone_exact'] ? $this->phone($record->phone) : null,
+                'email' => $rules['email_exact'] ? $this->email($record->email) : null,
+                'company_name' => $rules['company_name_fuzzy'] ? $this->name($record->company_name) : null,
+                'unified_social_credit_code' => $rules['unified_social_credit_code_exact'] ? $this->socialCreditCode($record) : null,
+            ]);
         }
 
-        return [
-            'phone' => $this->phone($record->phone),
-            'email' => $this->email($record->email),
-            'company_name' => $this->name($record->name),
-        ];
+        return array_filter([
+            'phone' => $rules['phone_exact'] ? $this->phone($record->phone) : null,
+            'email' => $rules['email_exact'] ? $this->email($record->email) : null,
+            'company_name' => $rules['company_name_fuzzy'] ? $this->name($record->name) : null,
+            'unified_social_credit_code' => $rules['unified_social_credit_code_exact'] ? $this->socialCreditCode($record) : null,
+        ]);
     }
 
     private function leadMatches(int $tenantId, string $field, string $value, Lead|Customer $record): array
     {
-        $column = $field === 'company_name' ? 'company_name' : $field;
+        $column = match ($field) {
+            'company_name' => 'company_name',
+            'unified_social_credit_code' => Schema::hasColumn('leads', 'unified_social_credit_code') ? 'unified_social_credit_code' : 'custom_fields->unified_social_credit_code',
+            default => $field,
+        };
 
         return Lead::query()
             ->where('tenant_id', $tenantId)
             ->when($record instanceof Lead && $record->exists, fn ($query) => $query->whereKeyNot($record->id))
-            ->where($column, $value)
+            ->when(
+                $field === 'company_name',
+                fn ($query) => $query->where($column, 'like', '%'.$value.'%'),
+                fn ($query) => $query->where($column, $value),
+            )
             ->limit(10)
             ->get(['id'])
             ->map(fn (Lead $lead): array => [
@@ -131,12 +145,20 @@ class DuplicateDetectionService
 
     private function customerMatches(int $tenantId, string $field, string $value, Lead|Customer $record): array
     {
-        $column = $field === 'company_name' ? 'name' : $field;
+        $column = match ($field) {
+            'company_name' => 'name',
+            'unified_social_credit_code' => Schema::hasColumn('customers', 'unified_social_credit_code') ? 'unified_social_credit_code' : 'custom_fields->unified_social_credit_code',
+            default => $field,
+        };
 
         return Customer::query()
             ->where('tenant_id', $tenantId)
             ->when($record instanceof Customer && $record->exists, fn ($query) => $query->whereKeyNot($record->id))
-            ->where($column, $value)
+            ->when(
+                $field === 'company_name',
+                fn ($query) => $query->where($column, 'like', '%'.$value.'%'),
+                fn ($query) => $query->where($column, $value),
+            )
             ->limit(10)
             ->get(['id'])
             ->map(fn (Customer $customer): array => [
@@ -169,12 +191,38 @@ class DuplicateDetectionService
         return str_replace(['（', '）'], ['(', ')'], $value);
     }
 
+    private function socialCreditCode(Lead|Customer $record): ?string
+    {
+        $value = $record->getAttribute('unified_social_credit_code') ?: data_get($record->custom_fields, 'unified_social_credit_code');
+
+        return filled($value) ? Str::upper(trim((string) $value)) : null;
+    }
+
+    /**
+     * @return array{phone_exact: bool, email_exact: bool, company_name_fuzzy: bool, unified_social_credit_code_exact: bool}
+     */
+    private function rules(int $tenantId): array
+    {
+        $value = Setting::query()
+            ->where('tenant_id', $tenantId)
+            ->where('key', 'duplicate_rules')
+            ->value('value');
+
+        return [
+            'phone_exact' => (bool) data_get($value, 'phone_exact', true),
+            'email_exact' => (bool) data_get($value, 'email_exact', true),
+            'company_name_fuzzy' => (bool) data_get($value, 'company_name_fuzzy', true),
+            'unified_social_credit_code_exact' => (bool) data_get($value, 'unified_social_credit_code_exact', true),
+        ];
+    }
+
     private function fieldLabel(string $field): string
     {
         return match ($field) {
             'phone' => '手机号',
             'email' => '邮箱',
             'company_name' => '客户名称',
+            'unified_social_credit_code' => '统一社会信用代码',
             default => $field,
         };
     }

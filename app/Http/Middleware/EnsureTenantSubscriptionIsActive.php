@@ -14,6 +14,10 @@ class EnsureTenantSubscriptionIsActive
         $tenant = Filament::getTenant();
         $subscription = $tenant?->activeSubscription;
 
+        if (! $subscription && $tenant?->trial_ends_at && $tenant->trial_ends_at->isPast()) {
+            abort(403, '当前公司试用已到期，请续费或升级套餐后继续使用。');
+        }
+
         if ($subscription && in_array($subscription->status, ['cancelled', 'expired'], true)) {
             abort(403, '当前公司订阅已到期。');
         }

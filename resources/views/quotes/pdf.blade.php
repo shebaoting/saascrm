@@ -9,12 +9,28 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
         th { background: #f3f4f6; }
+        .brand { display: table; width: 100%; margin-bottom: 24px; }
+        .brand-logo { display: table-cell; width: 120px; vertical-align: top; }
+        .brand-logo img { max-width: 100px; max-height: 56px; }
+        .brand-info { display: table-cell; vertical-align: top; }
         .muted { color: #6b7280; }
         .summary { margin-top: 16px; width: 45%; margin-left: auto; }
         .right { text-align: right; }
+        .terms { white-space: pre-line; line-height: 1.7; }
     </style>
 </head>
 <body>
+    <div class="brand">
+        @if ($logoDataUri)
+            <div class="brand-logo"><img src="{{ $logoDataUri }}" alt="Logo"></div>
+        @endif
+        <div class="brand-info">
+            <h1>{{ $quote->tenant?->name }}</h1>
+            <div class="muted">{{ $quote->tenant?->address ?: '-' }}</div>
+            <div class="muted">{{ $quote->tenant?->contact_phone ?: '-' }} / {{ $quote->tenant?->contact_email ?: '-' }}</div>
+        </div>
+    </div>
+
     <h1>{{ $quote->title }}</h1>
     <div class="muted">报价单号：{{ $quote->quote_number }} / 版本：V{{ $quote->version }}</div>
     <div class="muted">报价公司：{{ $quote->tenant?->name }} / 客户：{{ $quote->customer?->name }}</div>
@@ -56,6 +72,11 @@
     @if ($quote->notes)
         <h2>备注条款</h2>
         <div>{{ $quote->notes }}</div>
+    @endif
+
+    @if ($terms)
+        <h2>默认条款</h2>
+        <div class="terms">{{ $terms }}</div>
     @endif
 </body>
 </html>

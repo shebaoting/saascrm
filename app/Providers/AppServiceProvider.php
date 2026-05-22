@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Models\Activity;
 use App\Models\AuditLog;
 use App\Models\AutomationRule;
+use App\Models\Attachment;
+use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\CustomField;
 use App\Models\Lead;
@@ -18,9 +20,12 @@ use App\Models\Product;
 use App\Models\Quote;
 use App\Models\QuoteApprovalRequest;
 use App\Models\QuoteItem;
+use App\Models\TenantInvitation;
 use App\Services\Crm\ActivityService;
 use App\Services\Crm\AutomationService;
+use App\Services\Crm\BusinessNumberService;
 use App\Services\Crm\DuplicateDetectionService;
+use App\Services\Crm\FieldHistoryService;
 use App\Services\Crm\LeadAssignmentService;
 use App\Services\Crm\LeadScoringService;
 use App\Services\Crm\OrderFinanceService;
@@ -29,6 +34,7 @@ use App\Services\Crm\QuoteCalculatorService;
 use App\Support\Filament\CrmUi;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
@@ -50,7 +56,7 @@ class AppServiceProvider extends ServiceProvider
         CrmUi::configureComponents();
 
         Quote::creating(function (Quote $quote): void {
-            $quote->quote_number = $quote->quote_number ?: 'QT'.now()->format('YmdHis');
+            $quote->quote_number = $quote->quote_number ?: app(BusinessNumberService::class)->next((int) $quote->tenant_id, 'quote');
             $quote->user_id = $quote->user_id ?: Auth::id();
         });
 
@@ -86,7 +92,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Order::creating(function (Order $order): void {
-            $order->order_number = $order->order_number ?: 'SO'.now()->format('YmdHis');
+            $order->order_number = $order->order_number ?: app(BusinessNumberService::class)->next((int) $order->tenant_id, 'order');
             $order->ordered_at = $order->ordered_at ?: now();
         });
 
@@ -109,6 +115,10 @@ class AppServiceProvider extends ServiceProvider
         Lead::saving(fn (Lead $lead): bool => $this->normalizeContactFields($lead));
 
         Lead::creating(function (Lead $lead): void {
+            if (Schema::hasColumn($lead->getTable(), 'lead_number')) {
+                $lead->lead_number = $lead->lead_number ?: app(BusinessNumberService::class)->next((int) $lead->tenant_id, 'lead');
+            }
+
             app(DuplicateDetectionService::class)->assertNoDuplicateOnCreate($lead);
             app(PlanLimitService::class)->assertCanCreate($lead, $lead->tenant);
         });
@@ -120,11 +130,21 @@ class AppServiceProvider extends ServiceProvider
         Customer::saving(fn (Customer $customer): bool => $this->normalizeContactFields($customer));
 
         Customer::creating(function (Customer $customer): void {
+            if (Schema::hasColumn($customer->getTable(), 'customer_number')) {
+                $customer->customer_number = $customer->customer_number ?: app(BusinessNumberService::class)->next((int) $customer->tenant_id, 'customer');
+            }
+
             app(DuplicateDetectionService::class)->assertNoDuplicateOnCreate($customer);
             app(PlanLimitService::class)->assertCanCreate($customer, $customer->tenant);
         });
 
-        \App\Models\Contact::saving(fn (\App\Models\Contact $contact): bool => $this->normalizeContactFields($contact));
+        Contact::saving(fn (Contact $contact): bool => $this->normalizeContactFields($contact));
+
+        Attachment::creating(function (Attachment $attachment): void {
+            if ($attachment->tenant && $attachment->size) {
+                app(PlanLimitService::class)->assertStorageAvailable($attachment->tenant, (int) $attachment->size);
+            }
+        });
 
         CustomField::creating(function (CustomField $field): void {
             app(PlanLimitService::class)->assertCanCreate($field, $field->tenant);
@@ -132,6 +152,25 @@ class AppServiceProvider extends ServiceProvider
 
         AutomationRule::creating(function (AutomationRule $rule): void {
             app(PlanLimitService::class)->assertCanCreate($rule, $rule->tenant);
+        });
+
+        TenantInvitation::creating(function (TenantInvitation $invitation): void {
+            $invitation->token = $invitation->token ?: Str::random(48);
+            $invitation->status = $invitation->status ?: 'pending';
+            $invitation->invited_by = $invitation->invited_by
+                ?: Auth::id()
+                ?: $invitation->tenant?->users()->value('users.id');
+            $invitation->expires_at = $invitation->expires_at ?: now()->addDays(7);
+        });
+
+        TenantInvitation::created(function (TenantInvitation $invitation): void {
+            TenantInvitation::query()
+                ->where('tenant_id', $invitation->tenant_id)
+                ->whereKeyNot($invitation->getKey())
+                ->where('status', 'pending')
+                ->when($invitation->email, fn ($query) => $query->where('email', $invitation->email))
+                ->when(! $invitation->email && $invitation->phone, fn ($query) => $query->where('phone', $invitation->phone))
+                ->update(['status' => 'cancelled']);
         });
 
         OrderItem::saving(function (OrderItem $item): void {
@@ -168,9 +207,12 @@ class AppServiceProvider extends ServiceProvider
             app(OrderFinanceService::class)->refresh($expense->order);
         });
 
-        foreach ([Lead::class, Customer::class, Activity::class, Opportunity::class, Quote::class, QuoteApprovalRequest::class, Order::class, OrderPaymentPlan::class, Payment::class, OrderExpense::class, Product::class] as $model) {
+        foreach ([Lead::class, Customer::class, Contact::class, Activity::class, Opportunity::class, Quote::class, QuoteApprovalRequest::class, Order::class, OrderPaymentPlan::class, Payment::class, OrderExpense::class, Product::class] as $model) {
             $model::created(fn (Model $record) => $this->recordAudit('created', $record));
-            $model::updated(fn (Model $record) => $this->recordAudit('updated', $record));
+            $model::updated(function (Model $record): void {
+                $this->recordAudit('updated', $record);
+                app(FieldHistoryService::class)->record($record);
+            });
             $model::deleted(fn (Model $record) => $this->recordAudit('deleted', $record));
         }
     }

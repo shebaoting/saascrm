@@ -14,13 +14,18 @@ class QuotePdfService
         app(QuoteCalculatorService::class)->recalculate($quote);
 
         $quote->refresh()->load(['tenant', 'customer', 'contact', 'items']);
+        app(PlanLimitService::class)->assertFeature($quote->tenant, 'pdf');
 
         $options = new Options;
         $options->set('defaultFont', 'DejaVu Sans');
         $options->set('isRemoteEnabled', true);
 
         $dompdf = new Dompdf($options);
-        $dompdf->loadHtml(view('quotes.pdf', ['quote' => $quote])->render(), 'UTF-8');
+        $dompdf->loadHtml(view('quotes.pdf', [
+            'quote' => $quote,
+            'logoDataUri' => $this->logoDataUri($quote),
+            'terms' => data_get($quote->tenant?->settings, 'quote_terms'),
+        ])->render(), 'UTF-8');
         $dompdf->setPaper('A4');
         $dompdf->render();
 
@@ -37,5 +42,19 @@ class QuotePdfService
         $quote->forceFill(['pdf_path' => $path])->save();
 
         return $quote->refresh();
+    }
+
+    private function logoDataUri(Quote $quote): ?string
+    {
+        $path = $quote->tenant?->logo_path;
+
+        if (! $path || ! Storage::disk('local')->exists($path)) {
+            return null;
+        }
+
+        $mime = Storage::disk('local')->mimeType($path) ?: 'image/png';
+        $content = Storage::disk('local')->get($path);
+
+        return 'data:'.$mime.';base64,'.base64_encode($content);
     }
 }

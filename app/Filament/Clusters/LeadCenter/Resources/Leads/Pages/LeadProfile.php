@@ -5,6 +5,7 @@ namespace App\Filament\Clusters\LeadCenter\Resources\Leads\Pages;
 use App\Filament\Clusters\LeadCenter\Resources\Leads\LeadResource;
 use App\Models\Customer;
 use App\Models\Lead;
+use App\Services\Crm\LeadScoringService;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page;
 use Illuminate\Database\Eloquent\Builder;
@@ -46,6 +47,7 @@ class LeadProfile extends Page
                 ['label' => '任务', 'value' => $lead->tasks->count()],
                 ['label' => '附件', 'value' => $lead->attachments->count()],
             ],
+            'scoreBreakdown' => app(LeadScoringService::class)->explain($lead),
             'duplicates' => $this->duplicates($lead),
             'timeline' => $lead->activities
                 ->sortByDesc('occurred_at')

@@ -80,7 +80,17 @@ class RegisterTenant extends BaseRegisterTenant
                 'max_storage_mb' => 1024,
                 'max_custom_fields' => 20,
                 'max_automation_rules' => 10,
-                'features' => ['crm' => true, 'quotes' => true, 'reports' => true],
+                'features' => [
+                    'crm' => true,
+                    'quotes' => true,
+                    'orders' => true,
+                    'reports' => true,
+                    'automation' => true,
+                    'import' => true,
+                    'export' => true,
+                    'pdf' => true,
+                    'custom_fields' => true,
+                ],
                 'is_active' => true,
             ],
         );

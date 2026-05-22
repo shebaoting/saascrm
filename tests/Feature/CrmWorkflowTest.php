@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Clusters\LeadCenter\Resources\Leads\LeadResource;
+use App\Filament\Clusters\SystemSettings\Resources\AutomationRules\AutomationRuleResource;
 use App\Models\Activity;
 use App\Models\AssignmentRule;
 use App\Models\AssignmentRuleCondition;
@@ -10,19 +11,24 @@ use App\Models\AuditLog;
 use App\Models\AutomationAction;
 use App\Models\AutomationRule;
 use App\Models\Attachment;
+use App\Models\BusinessNumberRule;
 use App\Models\Contact;
 use App\Models\CustomField;
 use App\Models\Customer;
 use App\Models\Department;
 use App\Models\DuplicateRecord;
+use App\Models\FieldHistory;
 use App\Models\Lead;
 use App\Models\LeadScoreRule;
+use App\Models\Notification as CrmNotification;
 use App\Models\Opportunity;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\OrderPaymentPlan;
 use App\Models\Payment;
 use App\Models\Permission;
 use App\Models\Pipeline;
+use App\Models\Plan;
 use App\Models\PriceBook;
 use App\Models\PriceBookItem;
 use App\Models\Product;
@@ -31,19 +37,28 @@ use App\Models\ProductSku;
 use App\Models\Quote;
 use App\Models\QuoteItem;
 use App\Models\Role;
+use App\Models\SalesTarget;
 use App\Models\Setting;
 use App\Models\Tenant;
+use App\Models\TenantInvitation;
+use App\Models\TenantSubscription;
 use App\Models\User;
 use App\Services\Crm\CustomerMergeService;
 use App\Services\Crm\CustomerPoolService;
 use App\Services\Crm\DataPortService;
 use App\Services\Crm\LeadConversionService;
 use App\Services\Crm\LeadScoringService;
+use App\Services\Crm\NotificationService;
 use App\Services\Crm\OpportunityStageService;
+use App\Services\Crm\PlanLimitService;
 use App\Services\Crm\QuotePdfService;
 use App\Services\Crm\QuoteToOrderService;
 use App\Services\Crm\QuoteVersionService;
+use App\Services\Crm\SubscriptionLifecycleService;
+use App\Services\Crm\TenantInvitationService;
+use App\Support\CrmMetrics;
 use App\Support\Filament\CustomFieldUi;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -877,6 +892,340 @@ class CrmWorkflowTest extends TestCase
         $this->actingAs($user);
 
         $this->assertSame(['Mine'], LeadResource::getEloquentQuery()->pluck('company_name')->all());
+    }
+
+    public function test_report_metric_pages_have_core_rows(): void
+    {
+        $user = $this->user();
+        $tenant = $this->tenant($user);
+
+        Filament::setTenant($tenant, true);
+
+        try {
+            $lead = Lead::create([
+                'tenant_id' => $tenant->id,
+                'company_name' => '报表线索',
+                'source' => '官网',
+                'status' => 'converted',
+                'converted_at' => now(),
+            ]);
+
+            $customer = Customer::create([
+                'tenant_id' => $tenant->id,
+                'name' => '报表客户',
+                'customer_type' => 'company',
+                'lifecycle_stage' => 'active',
+                'owner_user_id' => $user->id,
+            ]);
+
+            $pipeline = Pipeline::create([
+                'tenant_id' => $tenant->id,
+                'name' => '报表管道',
+                'is_default' => true,
+                'is_active' => true,
+            ]);
+
+            $stage = $pipeline->stages()->create([
+                'tenant_id' => $tenant->id,
+                'name' => '方案报价',
+                'probability' => 60,
+                'stage_type' => 'open',
+                'sort_order' => 1,
+                'is_active' => true,
+            ]);
+
+            Opportunity::create([
+                'tenant_id' => $tenant->id,
+                'customer_id' => $customer->id,
+                'pipeline_id' => $pipeline->id,
+                'pipeline_stage_id' => $stage->id,
+                'name' => '报表商机',
+                'amount' => 5000,
+                'probability' => 60,
+                'forecast_category' => 'commit',
+                'expected_close_date' => now()->addWeek(),
+                'responsible_user_id' => $user->id,
+            ]);
+
+            $order = Order::create([
+                'tenant_id' => $tenant->id,
+                'order_number' => 'SO-REPORT',
+                'customer_id' => $customer->id,
+                'employee_id' => $user->id,
+                'total_amount' => 3000,
+                'gross_profit' => 1200,
+                'order_source' => 'sales_entry',
+                'order_status' => 'confirmed',
+                'payment_status' => 'partial_paid',
+                'ordered_at' => now(),
+            ]);
+
+            OrderItem::create([
+                'tenant_id' => $tenant->id,
+                'order_id' => $order->id,
+                'product_id' => 1,
+                'product_name' => '报表商品',
+                'sku_code' => 'REPORT-SKU',
+                'quantity' => 2,
+                'unit_price' => 1500,
+                'cost_price' => 900,
+                'subtotal_amount' => 3000,
+            ]);
+
+            SalesTarget::create([
+                'tenant_id' => $tenant->id,
+                'target_type' => 'user',
+                'target_id' => $user->id,
+                'period_type' => 'month',
+                'period_start' => now()->startOfMonth(),
+                'period_end' => now()->endOfMonth(),
+                'target_amount' => 10000,
+                'target_payment_amount' => 5000,
+            ]);
+
+            app(CustomerPoolService::class)->releaseCustomer($customer, '超期未跟进');
+            app(CustomerPoolService::class)->claimCustomer($customer->refresh(), $user);
+
+            $this->assertNotEmpty(CrmMetrics::pipelineReport()['rows']);
+            $this->assertNotEmpty(CrmMetrics::forecastReport()['rows']);
+            $this->assertNotEmpty(CrmMetrics::salesTargetReport()['rows']);
+            $this->assertNotEmpty(CrmMetrics::leadConversionReport()['rows']);
+            $this->assertNotEmpty(CrmMetrics::poolReport()['rows']);
+            $this->assertNotEmpty(CrmMetrics::productSalesReport()['rows']);
+        } finally {
+            Filament::setTenant(null, true);
+        }
+    }
+
+    public function test_tenant_invitation_accepts_and_assigns_role_and_department(): void
+    {
+        $admin = $this->user();
+        $tenant = $this->tenant($admin);
+        $role = Role::create(['tenant_id' => $tenant->id, 'name' => '销售', 'guard_name' => 'web', 'data_scope' => 'self']);
+        $department = Department::create(['tenant_id' => $tenant->id, 'name' => '华东一部']);
+
+        $invitation = TenantInvitation::create([
+            'tenant_id' => $tenant->id,
+            'email' => 'invitee@example.com',
+            'role_ids' => [$role->id],
+            'department_ids' => [$department->id],
+            'invited_by' => $admin->id,
+            'expires_at' => now()->addDay(),
+        ]);
+
+        $user = app(TenantInvitationService::class)->accept($invitation, [
+            'name' => 'Invitee',
+            'email' => 'invitee@example.com',
+            'password' => 'password123',
+        ]);
+
+        $this->assertSame('accepted', $invitation->refresh()->status);
+        $this->assertTrue($user->canAccessTenant($tenant));
+        $this->assertDatabaseHas('model_has_roles', [
+            'role_id' => $role->id,
+            'model_id' => $user->id,
+            'tenant_id' => $tenant->id,
+        ]);
+        $this->assertDatabaseHas('department_user', [
+            'tenant_id' => $tenant->id,
+            'department_id' => $department->id,
+            'user_id' => $user->id,
+        ]);
+    }
+
+    public function test_import_failure_can_be_retried_and_notifies_user(): void
+    {
+        $user = $this->user();
+        $tenant = $this->tenant($user);
+
+        Storage::fake('local');
+        Storage::disk('local')->put('imports/leads.csv', "company_name,contact_name,phone\n,,\n");
+
+        $import = app(DataPortService::class)->import($tenant->id, $user, 'leads', 'imports/leads.csv');
+        $failed = $import->failedRows()->firstOrFail();
+
+        $failed->forceFill([
+            'data' => ['company_name' => '重试线索', 'phone' => '13900009999'],
+        ])->save();
+
+        $ok = app(DataPortService::class)->retryFailedRow($failed->refresh(), $user);
+
+        $this->assertTrue($ok);
+        $this->assertDatabaseHas('leads', [
+            'tenant_id' => $tenant->id,
+            'company_name' => '重试线索',
+        ]);
+        $this->assertDatabaseMissing('failed_import_rows', ['id' => $failed->id]);
+        $this->assertDatabaseHas('notifications', [
+            'tenant_id' => $tenant->id,
+            'notifiable_id' => $user->id,
+            'type' => 'import_completed',
+        ]);
+    }
+
+    public function test_notifications_can_be_marked_read_and_subscription_lifecycle_sends_reminders(): void
+    {
+        $user = $this->user();
+        $tenant = $this->tenant($user);
+        $plan = Plan::create([
+            'name' => '标准版',
+            'code' => 'standard',
+            'price_monthly' => 100,
+            'price_yearly' => 1000,
+            'is_active' => true,
+        ]);
+
+        $subscription = TenantSubscription::create([
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan->id,
+            'status' => 'active',
+            'billing_cycle' => 'monthly',
+            'starts_at' => now()->subMonth(),
+            'ends_at' => now()->addDays(3),
+        ]);
+
+        $result = app(SubscriptionLifecycleService::class)->run();
+        $notification = CrmNotification::where('tenant_id', $tenant->id)->where('type', 'subscription_expiring')->firstOrFail();
+
+        $this->assertSame(1, $result['reminded']);
+        $this->assertNull($notification->read_at);
+
+        app(NotificationService::class)->markRead($notification);
+        $this->assertNotNull($notification->refresh()->read_at);
+
+        $subscription->forceFill(['ends_at' => now()->subDay()])->save();
+        app(SubscriptionLifecycleService::class)->run();
+        $this->assertSame('expired', $subscription->refresh()->status);
+    }
+
+    public function test_business_number_rules_generate_numbers_and_field_history_tracks_changes(): void
+    {
+        $user = $this->user();
+        $tenant = $this->tenant($user);
+        $this->actingAs($user);
+
+        BusinessNumberRule::create([
+            'tenant_id' => $tenant->id,
+            'module' => 'customer',
+            'name' => '客户编号',
+            'prefix' => 'C',
+            'pattern' => '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}',
+            'sequence_length' => 3,
+            'reset_period' => 'daily',
+            'is_active' => true,
+        ]);
+
+        $customer = Customer::create([
+            'tenant_id' => $tenant->id,
+            'name' => '编号客户',
+            'phone' => '138 0000 0000',
+            'owner_user_id' => $user->id,
+        ]);
+
+        $this->assertMatchesRegularExpression('/^C-\d{8}-001$/', $customer->refresh()->customer_number);
+
+        $customer->forceFill(['name' => '编号客户新版'])->save();
+
+        $this->assertDatabaseHas('field_histories', [
+            'tenant_id' => $tenant->id,
+            'model_type' => Customer::class,
+            'model_id' => $customer->id,
+            'field' => 'name',
+        ]);
+
+        $history = FieldHistory::where('model_type', Customer::class)->where('model_id', $customer->id)->where('field', 'name')->firstOrFail();
+        $this->assertSame('编号客户', data_get($history->old_value, 'value'));
+        $this->assertSame('编号客户新版', data_get($history->new_value, 'value'));
+    }
+
+    public function test_plan_feature_gates_automation_import_export_and_storage_usage(): void
+    {
+        $user = $this->user();
+        $tenant = $this->tenant($user);
+        $this->actingAs($user);
+        $plan = Plan::create([
+            'name' => '受限套餐',
+            'code' => 'limited',
+            'price_monthly' => 99,
+            'price_yearly' => 999,
+            'max_storage_mb' => 2,
+            'max_imports_daily' => 1,
+            'features' => [
+                'automation' => false,
+                'import' => true,
+                'export' => false,
+            ],
+            'is_active' => true,
+        ]);
+
+        TenantSubscription::create([
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan->id,
+            'status' => 'active',
+            'billing_cycle' => 'monthly',
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addMonth(),
+        ]);
+
+        try {
+            Filament::setTenant($tenant);
+            Storage::fake('local');
+            Storage::disk('local')->put('imports/limited.csv', "company_name,phone\n套餐线索,13911112222\n");
+
+            $this->assertFalse(app(PlanLimitService::class)->hasFeature($tenant->refresh(), 'automation'));
+            $this->assertFalse(AutomationRuleResource::canViewAny());
+
+            app(DataPortService::class)->import($tenant->id, $user, 'leads', 'imports/limited.csv');
+
+            $this->expectException(ValidationException::class);
+            app(DataPortService::class)->import($tenant->id, $user, 'leads', 'imports/limited.csv');
+        } finally {
+            Filament::setTenant(null, true);
+        }
+    }
+
+    public function test_export_gate_and_platform_overview_surface_usage_warnings(): void
+    {
+        $user = $this->user();
+        $tenant = $this->tenant($user);
+        $plan = Plan::create([
+            'name' => '平台套餐',
+            'code' => 'platform-plan',
+            'price_monthly' => 199,
+            'price_yearly' => 1999,
+            'max_storage_mb' => 2,
+            'features' => [
+                'export' => false,
+            ],
+            'is_active' => true,
+        ]);
+
+        TenantSubscription::create([
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan->id,
+            'status' => 'active',
+            'billing_cycle' => 'monthly',
+            'starts_at' => now()->subDay(),
+            'ends_at' => now()->addDays(3),
+        ]);
+
+        Attachment::create([
+            'tenant_id' => $tenant->id,
+            'path' => 'tenants/'.$tenant->id.'/attachments/contract.pdf',
+            'disk' => 'local',
+            'user_id' => $user->id,
+            'model_type' => Customer::class,
+            'model_id' => 1,
+            'name' => '合同',
+            'size' => 2 * 1024 * 1024,
+        ]);
+
+        $overview = CrmMetrics::platformOverview();
+        $this->assertTrue(collect($overview['rows'])->contains(fn (array $row): bool => str_contains($row['title'], '用量异常')));
+        $this->assertTrue(collect($overview['rows'])->contains(fn (array $row): bool => str_contains($row['title'], '即将到期')));
+
+        $this->expectException(ValidationException::class);
+        app(DataPortService::class)->export($tenant->id, $user, 'customers');
     }
 
     private function user(): User

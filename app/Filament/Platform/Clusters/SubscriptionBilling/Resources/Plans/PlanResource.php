@@ -5,12 +5,14 @@ namespace App\Filament\Platform\Clusters\SubscriptionBilling\Resources\Plans;
 use App\Filament\Platform\Clusters\SubscriptionBilling\Resources\Plans\Pages\ManagePlans;
 use App\Filament\Platform\Clusters\SubscriptionBilling\SubscriptionBillingCluster;
 use App\Models\Plan;
+use App\Services\Crm\PlanLimitService;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
@@ -70,7 +72,23 @@ class PlanResource extends Resource
                     ->numeric(),
                 TextInput::make('max_automation_rules')
                     ->numeric(),
-                TextInput::make('features'),
+                TextInput::make('max_imports_daily')
+                    ->numeric(),
+                TextInput::make('max_exports_daily')
+                    ->numeric(),
+                CheckboxList::make('features')
+                    ->label('功能开关')
+                    ->options(PlanLimitService::featureLabels())
+                    ->columns(3)
+                    ->afterStateHydrated(function ($component, ?array $state): void {
+                        $component->state(collect($state ?: [])
+                            ->filter(fn (mixed $enabled): bool => (bool) $enabled)
+                            ->keys()
+                            ->all());
+                    })
+                    ->dehydrateStateUsing(fn (?array $state): array => collect(PlanLimitService::featureLabels())
+                        ->mapWithKeys(fn (string $label, string $key): array => [$key => in_array($key, $state ?: [], true)])
+                        ->all()),
                 Toggle::make('is_active')
                     ->required(),
             ]);
@@ -103,6 +121,19 @@ class PlanResource extends Resource
                     ->placeholder('-'),
                 TextEntry::make('max_automation_rules')
                     ->numeric()
+                    ->placeholder('-'),
+                TextEntry::make('max_imports_daily')
+                    ->numeric()
+                    ->placeholder('-'),
+                TextEntry::make('max_exports_daily')
+                    ->numeric()
+                    ->placeholder('-'),
+                TextEntry::make('features')
+                    ->formatStateUsing(fn (?array $state): string => collect($state ?: [])
+                        ->filter()
+                        ->keys()
+                        ->map(fn (string $key): string => PlanLimitService::featureLabels()[$key] ?? $key)
+                        ->join('、'))
                     ->placeholder('-'),
                 IconEntry::make('is_active')
                     ->boolean(),
@@ -148,6 +179,22 @@ class PlanResource extends Resource
                 TextColumn::make('max_automation_rules')
                     ->numeric()
                     ->sortable(),
+                TextColumn::make('max_imports_daily')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('max_exports_daily')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('features')
+                    ->formatStateUsing(fn (?array $state): string => collect($state ?: [])
+                        ->filter()
+                        ->keys()
+                        ->map(fn (string $key): string => PlanLimitService::featureLabels()[$key] ?? $key)
+                        ->join('、'))
+                    ->wrap()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_active')
                     ->boolean(),
                 TextColumn::make('created_at')

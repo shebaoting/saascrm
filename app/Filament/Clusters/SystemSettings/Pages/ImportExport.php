@@ -57,6 +57,52 @@ class ImportExport extends Page
                         ->body('成功 '.$import->successful_rows.' 行，失败 '.($import->processed_rows - $import->successful_rows).' 行。')
                         ->send();
                 }),
+            Action::make('precheck_csv')
+                ->label('导入预检')
+                ->icon('heroicon-o-clipboard-document-check')
+                ->form([
+                    Select::make('module')
+                        ->label('导入对象')
+                        ->options(DataPortService::importModules())
+                        ->required(),
+                    FileUpload::make('file')
+                        ->label('CSV 文件')
+                        ->disk('local')
+                        ->directory(fn (): string => 'tenants/'.Filament::getTenant()->getKey().'/imports/precheck')
+                        ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel'])
+                        ->required(),
+                ])
+                ->action(function (array $data): void {
+                    $result = app(DataPortService::class)->precheck($data['module'], $data['file']);
+                    $missing = $result['missing_headers'] === []
+                        ? '表头完整'
+                        : '缺少表头：'.implode('、', $result['missing_headers']);
+
+                    Notification::make()
+                        ->success()
+                        ->title('预检完成')
+                        ->body('共 '.$result['total_rows'].' 行，'.$missing.'。')
+                        ->send();
+                }),
+            Action::make('download_template')
+                ->label('下载模板')
+                ->icon('heroicon-o-document-arrow-down')
+                ->form([
+                    Select::make('module')
+                        ->label('模板对象')
+                        ->options(DataPortService::importModules())
+                        ->required(),
+                ])
+                ->action(function (array $data): void {
+                    $tenant = Filament::getTenant();
+                    $path = app(DataPortService::class)->createTemplate($tenant->getKey(), $data['module']);
+
+                    Notification::make()
+                        ->success()
+                        ->title('模板已生成')
+                        ->body($path)
+                        ->send();
+                }),
             Action::make('export_csv')
                 ->label('导出 CSV')
                 ->icon('heroicon-o-arrow-down-tray')

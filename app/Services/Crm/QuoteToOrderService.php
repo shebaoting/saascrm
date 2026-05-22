@@ -218,12 +218,6 @@ class QuoteToOrderService
 
     private function nextOrderNumber(int $tenantId): string
     {
-        $prefix = 'SO'.now()->format('Ymd');
-        $count = Order::query()
-            ->where('tenant_id', $tenantId)
-            ->where('order_number', 'like', $prefix.'%')
-            ->count() + 1;
-
-        return $prefix.str_pad((string) $count, 4, '0', STR_PAD_LEFT);
+        return app(BusinessNumberService::class)->next($tenantId, 'order');
     }
 }

@@ -6,7 +6,9 @@ use App\Filament\Clusters\SystemSettings\Resources\FailedImportRows\Pages\Manage
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\FailedImportRow;
+use App\Services\Crm\DataPortService;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -16,6 +18,7 @@ use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -40,7 +43,7 @@ class FailedImportRowResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
 
     protected static ?string $cluster = SystemSettingsCluster::class;
 
@@ -99,6 +102,17 @@ class FailedImportRowResource extends Resource
                 //
             ])
             ->recordActions([
+                Action::make('retry')
+                    ->label('重试')
+                    ->icon('heroicon-o-arrow-path')
+                    ->requiresConfirmation()
+                    ->action(function (FailedImportRow $record): void {
+                        $ok = app(DataPortService::class)->retryFailedRow($record, auth()->user());
+                        $notification = Notification::make()
+                            ->title($ok ? '重试成功' : '重试失败');
+
+                        ($ok ? $notification->success() : $notification->danger())->send();
+                    }),
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),

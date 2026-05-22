@@ -35,6 +35,23 @@
 
         <div class="crm-profile-grid">
             <section class="crm-record-panel">
+                <div class="crm-record-panel-title">评分解释</div>
+                <div class="crm-record-list">
+                    @foreach (['rules' => '规则命中', 'completeness' => '资料完整度', 'behavior' => '行为评分'] as $group => $label)
+                        @forelse ($scoreBreakdown[$group] ?? [] as $item)
+                            <div class="crm-record-row">
+                                <div class="crm-record-name">{{ $item['name'] }}</div>
+                                <div class="crm-record-meta">{{ $label }}</div>
+                                <div class="crm-record-value">+{{ $item['score'] }}</div>
+                            </div>
+                        @empty
+                            <div class="crm-record-empty">{{ $label }}暂无加分</div>
+                        @endforelse
+                    @endforeach
+                </div>
+            </section>
+
+            <section class="crm-record-panel">
                 <div class="crm-record-panel-title">活动时间线</div>
                 <div class="crm-record-list">
                     @forelse ($timeline as $activity)

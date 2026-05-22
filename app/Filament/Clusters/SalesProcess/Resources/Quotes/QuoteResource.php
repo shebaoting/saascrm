@@ -5,6 +5,7 @@ namespace App\Filament\Clusters\SalesProcess\Resources\Quotes;
 use App\Filament\Clusters\SalesProcess\Resources\Quotes\Pages\ManageQuotes;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
 use App\Filament\Concerns\UsesCrmAccess;
+use App\Jobs\GenerateQuotePdfJob;
 use App\Models\Contact;
 use App\Models\Notification as CrmNotification;
 use App\Models\Quote;
@@ -13,7 +14,6 @@ use App\Models\User;
 use App\Services\Crm\ActivityService;
 use App\Services\Crm\AuditLogService;
 use App\Services\Crm\QuoteCalculatorService;
-use App\Services\Crm\QuotePdfService;
 use App\Services\Crm\QuoteToOrderService;
 use App\Services\Crm\QuoteVersionService;
 use App\Support\CrmAccess;
@@ -468,9 +468,9 @@ class QuoteResource extends Resource
                     ->label('生成 PDF')
                     ->icon('heroicon-o-document-arrow-down')
                     ->action(function (Quote $record): void {
-                        app(QuotePdfService::class)->generate($record);
+                        GenerateQuotePdfJob::dispatch($record->id);
 
-                        Notification::make()->success()->title('报价 PDF 已生成')->send();
+                        Notification::make()->success()->title('报价 PDF 已加入生成队列')->send();
                     }),
                 Action::make('convert_order')
                     ->label('转订单')

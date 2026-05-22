@@ -67,6 +67,7 @@ class CustomerResource extends Resource
             ->components([
                 Section::make('基础信息')
                     ->schema([
+                        CustomFieldUi::applyLayout(TextInput::make('customer_number')->label('客户编号')->disabled()->dehydrated(false), 'customer', 'customer_number'),
                         CustomFieldUi::applyLayout(TextInput::make('name')->required(), 'customer', 'name'),
                         CustomFieldUi::applyLayout(TextInput::make('short_name'), 'customer', 'short_name'),
                         CustomFieldUi::applyLayout(Select::make('customer_type')->options(CrmUi::options('customer.customer_type'))->required()->default('company'), 'customer', 'customer_type'),
@@ -123,6 +124,9 @@ class CustomerResource extends Resource
                 TextEntry::make('deleted_at')
                     ->dateTime()
                     ->visible(fn (Customer $record): bool => $record->trashed()),
+                TextEntry::make('customer_number')
+                    ->label('客户编号')
+                    ->placeholder('-'),
                 TextEntry::make('name'),
                 TextEntry::make('short_name')
                     ->placeholder('-'),
@@ -187,6 +191,10 @@ class CustomerResource extends Resource
                 TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('customer_number')
+                    ->label('客户编号')
+                    ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('name')
                     ->searchable(),

@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\Attachment;
 use App\Models\AutomationAction;
 use App\Models\AutomationRule;
+use App\Models\BusinessNumberRule;
 use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\CustomerPoolHistory;
@@ -452,7 +453,7 @@ class CrmAccess
             Payment::class, OrderExpense::class => 'payment',
             ProductGroup::class, Product::class, ProductSku::class, PriceBook::class, PriceBookItem::class => 'product',
             KbCategory::class, KbArticle::class => 'knowledge',
-            Setting::class, Department::class, Role::class, TenantInvitation::class, CustomField::class, CustomFieldLayout::class, DuplicateRecord::class, Import::class, Export::class, FailedImportRow::class, Attachment::class, AutomationRule::class, AutomationAction::class => 'settings',
+            Setting::class, Department::class, Role::class, TenantInvitation::class, CustomField::class, CustomFieldLayout::class, BusinessNumberRule::class, DuplicateRecord::class, Import::class, Export::class, FailedImportRow::class, Attachment::class, AutomationRule::class, AutomationAction::class => 'settings',
             User::class => 'settings',
             default => str(class_basename($modelClass))->snake()->toString(),
         };

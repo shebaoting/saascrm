@@ -79,4 +79,9 @@ class Customer extends TenantModel
     {
         return $this->morphMany(CustomerTransferHistory::class, 'target');
     }
+
+    public function fieldHistories(): MorphMany
+    {
+        return $this->morphMany(FieldHistory::class, 'model');
+    }
 }
