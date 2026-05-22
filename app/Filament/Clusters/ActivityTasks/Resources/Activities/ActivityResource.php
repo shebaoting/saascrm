@@ -12,6 +12,7 @@ use App\Filament\Clusters\ActivityTasks\Resources\Activities\Schemas\ActivityInf
 use App\Filament\Clusters\ActivityTasks\Resources\Activities\Tables\ActivityTable;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Activity;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -28,19 +29,24 @@ class ActivityResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static ?string $navigationLabel = '活动时间线';
+    protected static ?string $navigationLabel = '跟进记录';
 
-    protected static ?string $modelLabel = '活动时间线';
+    protected static ?string $modelLabel = '跟进记录';
 
-    protected static ?string $pluralModelLabel = '活动时间线';
+    protected static ?string $pluralModelLabel = '跟进记录';
 
-    protected static ?string $title = '活动时间线';
+    protected static ?string $title = '跟进记录';
 
     protected static bool $hasTitleCaseModelLabel = false;
 
     protected static ?string $cluster = ActivityTasksCluster::class;
 
     protected static ?string $recordTitleAttribute = 'subject';
+
+    public static function followUpSubject(?string $type): string
+    {
+        return CrmUi::followUpSubject($type);
+    }
 
     public static function form(Schema $schema): Schema
     {

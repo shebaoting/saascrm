@@ -412,7 +412,7 @@ class CrmUi
                 'outgoing' => '主动联系',
             ],
             'activity.type' => [
-                'note' => '记录',
+                'note' => '员工跟进',
                 'call' => '电话',
                 'email' => '邮件',
                 'meeting' => '会议',
@@ -420,7 +420,7 @@ class CrmUi
                 'wechat' => '微信',
                 'quote' => '报价',
                 'order' => '订单',
-                'system' => '系统事件',
+                'system' => '系统日志',
             ],
             'attachment.category' => [
                 'contract' => '合同',
@@ -666,6 +666,28 @@ class CrmUi
             'trigger_type',
             'type',
         ], true);
+    }
+
+    public static function followUpSubject(?string $type): string
+    {
+        return static::options('activity.type')[$type ?: 'note'] ?? '跟进';
+    }
+
+    public static function followUpContent(Model $activity): string
+    {
+        $typeLabel = static::followUpSubject(data_get($activity, 'type'));
+        $subject = trim((string) data_get($activity, 'subject', ''));
+        $content = trim((string) data_get($activity, 'content', ''));
+
+        if ($content === '') {
+            return $subject !== '' ? $subject : $typeLabel;
+        }
+
+        if ($subject === '' || $subject === $typeLabel) {
+            return $content;
+        }
+
+        return $subject.'：'.$content;
     }
 
     public static function valueLabel(string $name, mixed $state, ?Model $record = null): ?string

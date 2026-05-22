@@ -3,9 +3,9 @@
 namespace App\Providers;
 
 use App\Models\Activity;
+use App\Models\Attachment;
 use App\Models\AuditLog;
 use App\Models\AutomationRule;
-use App\Models\Attachment;
 use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\CustomField;
@@ -16,8 +16,8 @@ use App\Models\OrderExpense;
 use App\Models\OrderItem;
 use App\Models\OrderPaymentPlan;
 use App\Models\Payment;
-use App\Models\Product;
 use App\Models\PipelineStage;
+use App\Models\Product;
 use App\Models\Quote;
 use App\Models\QuoteApprovalRequest;
 use App\Models\QuoteItem;
@@ -84,6 +84,7 @@ class AppServiceProvider extends ServiceProvider
         Activity::creating(function (Activity $activity): void {
             $activity->occurred_at = $activity->occurred_at ?: now();
             $activity->owner_user_id = $activity->owner_user_id ?: Auth::id();
+            $activity->subject = $activity->subject ?: CrmUi::followUpSubject($activity->type);
         });
 
         Activity::saved(function (Activity $activity): void {

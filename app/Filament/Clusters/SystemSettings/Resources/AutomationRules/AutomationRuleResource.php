@@ -91,7 +91,7 @@ class AutomationRuleResource extends Resource
             'lifecycle_stage' => '客户阶段',
             'forecast_category' => '预测分类',
             'amount' => '金额',
-            'type' => '活动类型',
+            'type' => '跟进类型',
         ];
     }
 

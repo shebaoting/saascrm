@@ -65,7 +65,7 @@
 
                         @foreach ($day['activities'] as $activity)
                             <article class="crm-calendar-item is-activity">
-                                <div>{{ $activity->subject ?: '未命名活动' }}</div>
+                                <div>{{ \App\Support\Filament\CrmUi::followUpContent($activity) ?: '未命名跟进' }}</div>
                                 <span>
                                     {{ \App\Support\Filament\CrmUi::valueLabel('type', $activity->type, $activity) }}
                                     / {{ $activity->owner?->name ?: '-' }}

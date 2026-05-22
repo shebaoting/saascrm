@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Models\Activity;
 use App\Models\AssignmentRule;
-use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\CustomerPoolHistory;
 use App\Models\Department;
@@ -100,7 +99,7 @@ class CrmMetrics
             'metrics' => [
                 ['label' => '今日任务', 'value' => Task::where('tenant_id', $tenantId)->whereDate('due_at', today())->count()],
                 ['label' => '本周任务', 'value' => Task::where('tenant_id', $tenantId)->whereBetween('due_at', [now()->startOfWeek(), now()->endOfWeek()])->count()],
-                ['label' => '今日活动', 'value' => Activity::where('tenant_id', $tenantId)->whereDate('occurred_at', today())->count()],
+                ['label' => '今日跟进', 'value' => Activity::where('tenant_id', $tenantId)->whereDate('occurred_at', today())->count()],
                 ['label' => '下次跟进', 'value' => Activity::where('tenant_id', $tenantId)->whereNotNull('next_follow_at')->count()],
             ],
             'rows' => Task::where('tenant_id', $tenantId)
@@ -210,19 +209,19 @@ class CrmMetrics
 
         return [
             'heading' => '跟进效率',
-            'description' => '首次响应、未跟进客户、逾期任务、活动频率和员工排行。',
+            'description' => '首次响应、未跟进客户、逾期任务、跟进频率和员工排行。',
             'metrics' => [
                 ['label' => '平均首次响应', 'value' => $firstResponseHours === null ? '-' : round((float) $firstResponseHours, 1).' 小时'],
                 ['label' => '30天未跟进客户', 'value' => Customer::where('tenant_id', $tenantId)->where(fn ($query) => $query->whereNull('last_activity_at')->orWhere('last_activity_at', '<', now()->subDays(30)))->count()],
                 ['label' => '逾期任务', 'value' => Task::where('tenant_id', $tenantId)->where('status', '!=', 'completed')->where('due_at', '<', now())->count()],
-                ['label' => '本周活动', 'value' => Activity::where('tenant_id', $tenantId)->whereBetween('occurred_at', [now()->startOfWeek(), now()->endOfWeek()])->count()],
+                ['label' => '本周跟进', 'value' => Activity::where('tenant_id', $tenantId)->whereBetween('occurred_at', [now()->startOfWeek(), now()->endOfWeek()])->count()],
             ],
             'rows' => User::query()
                 ->whereHas('tenants', fn ($query) => $query->whereKey($tenantId))
                 ->get()
                 ->map(fn (User $user): array => [
                     'title' => $user->name,
-                    'meta' => '活动 '.Activity::where('tenant_id', $tenantId)->where('owner_user_id', $user->id)->count().' 次 / 逾期任务 '.Task::where('tenant_id', $tenantId)->where('assignee_id', $user->id)->where('status', '!=', 'completed')->where('due_at', '<', now())->count().' 个',
+                    'meta' => '跟进 '.Activity::where('tenant_id', $tenantId)->where('owner_user_id', $user->id)->count().' 次 / 逾期任务 '.Task::where('tenant_id', $tenantId)->where('assignee_id', $user->id)->where('status', '!=', 'completed')->where('due_at', '<', now())->count().' 个',
                     'value' => '客户 '.Customer::where('tenant_id', $tenantId)->where('owner_user_id', $user->id)->where(fn ($query) => $query->whereNull('last_activity_at')->orWhere('last_activity_at', '<', now()->subDays(30)))->count().' 未跟进',
                 ])
                 ->all(),

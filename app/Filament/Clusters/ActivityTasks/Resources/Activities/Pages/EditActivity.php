@@ -11,6 +11,13 @@ class EditActivity extends EditRecord
 {
     protected static string $resource = ActivityResource::class;
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $data['subject'] = ActivityResource::followUpSubject($data['type'] ?? null);
+
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         return [

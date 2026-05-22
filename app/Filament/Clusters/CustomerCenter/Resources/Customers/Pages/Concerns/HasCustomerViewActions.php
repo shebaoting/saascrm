@@ -2,23 +2,24 @@
 
 namespace App\Filament\Clusters\CustomerCenter\Resources\Customers\Pages\Concerns;
 
-    use App\Models\Activity;
-    use App\Models\Contact;
-    use App\Models\Customer;
-    use App\Models\Opportunity;
-    use App\Models\Pipeline;
-    use App\Models\PipelineStage;
-    use App\Models\Task;
-    use App\Models\User;
-    use App\Support\Filament\CrmUi;
-    use Filament\Actions\Action;
-    use Filament\Forms\Components\DatePicker;
-    use Filament\Forms\Components\DateTimePicker;
-    use Filament\Forms\Components\Select;
-    use Filament\Forms\Components\Textarea;
-    use Filament\Forms\Components\TextInput;
-    use Filament\Notifications\Notification;
-    use Illuminate\Database\Eloquent\Builder;
+use App\Models\Activity;
+use App\Models\Contact;
+use App\Models\Customer;
+use App\Models\Opportunity;
+use App\Models\Pipeline;
+use App\Models\PipelineStage;
+use App\Models\Task;
+use App\Models\User;
+use App\Support\Filament\CrmUi;
+use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Grid;
+use Illuminate\Database\Eloquent\Builder;
 
 trait HasCustomerViewActions
 {
@@ -52,23 +53,35 @@ trait HasCustomerViewActions
                     Notification::make()->success()->title('联系人已新增')->send();
                 }),
             Action::make('createActivity')
-                ->label('新增活动')
+                ->label('新增跟进')
                 ->icon('heroicon-o-chat-bubble-left-right')
                 ->form([
-                    Select::make('contact_id')
-                        ->options(fn (): array => $this->getRecord()->contacts()->orderBy('name')->pluck('name', 'id')->all()),
-                    Select::make('type')
-                        ->options(CrmUi::options('activity.type'))
-                        ->default('note')
-                        ->required(),
-                    Select::make('direction')
-                        ->options(CrmUi::options('activity.direction'))
-                        ->default('outgoing'),
-                    TextInput::make('subject')->required(),
-                    Textarea::make('content')->columnSpanFull(),
-                    TextInput::make('outcome'),
-                    DateTimePicker::make('occurred_at')->default(now())->required(),
-                    DateTimePicker::make('next_follow_at'),
+                    Grid::make(['md' => 2])
+                        ->schema([
+                            Select::make('contact_id')
+                                ->label('联系人')
+                                ->options(fn (): array => $this->getRecord()->contacts()->orderBy('name')->pluck('name', 'id')->all()),
+                            Select::make('type')
+                                ->label('跟进类型')
+                                ->options(CrmUi::options('activity.type'))
+                                ->default('note')
+                                ->required(),
+                            Select::make('direction')
+                                ->label('方向')
+                                ->options(CrmUi::options('activity.direction'))
+                                ->default('outgoing'),
+                            DateTimePicker::make('occurred_at')
+                                ->label('跟进时间')
+                                ->default(now())
+                                ->required(),
+                            DateTimePicker::make('next_follow_at')
+                                ->label('下次跟进时间'),
+                            Textarea::make('content')
+                                ->label('跟进内容')
+                                ->required()
+                                ->rows(4)
+                                ->columnSpanFull(),
+                        ]),
                 ])
                 ->action(function (array $data): void {
                     /** @var Customer $customer */
@@ -80,15 +93,14 @@ trait HasCustomerViewActions
                         'contact_id' => $data['contact_id'] ?? null,
                         'type' => $data['type'],
                         'direction' => $data['direction'] ?? null,
-                        'subject' => $data['subject'],
+                        'subject' => CrmUi::followUpSubject($data['type'] ?? null),
                         'content' => $data['content'] ?? null,
-                        'outcome' => $data['outcome'] ?? null,
                         'occurred_at' => $data['occurred_at'],
                         'next_follow_at' => $data['next_follow_at'] ?? null,
                         'owner_user_id' => auth()->id() ?: $customer->owner_user_id,
                     ]);
 
-                    Notification::make()->success()->title('活动已新增')->send();
+                    Notification::make()->success()->title('跟进已新增')->send();
                 }),
             Action::make('createTask')
                 ->label('新增任务')

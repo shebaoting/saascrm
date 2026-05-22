@@ -2,6 +2,8 @@
 
 namespace App\Filament\Clusters\ActivityTasks\Resources\Activities\Tables;
 
+use App\Models\Activity;
+use App\Support\Filament\CrmUi;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -20,42 +22,62 @@ class ActivityTable
         return $table
             ->recordTitleAttribute('subject')
             ->columns([
+                TextColumn::make('content')
+                    ->label('跟进内容')
+                    ->state(fn (Activity $record): string => CrmUi::followUpContent($record))
+                    ->searchable(['subject', 'content'])
+                    ->limit(80)
+                    ->wrap(),
+                TextColumn::make('type')
+                    ->label('类型')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('customer.name')
+                    ->label('客户')
+                    ->searchable(),
+                TextColumn::make('contact.name')
+                    ->label('联系人')
+                    ->searchable()
+                    ->toggleable(),
+                TextColumn::make('occurred_at')
+                    ->label('跟进时间')
+                    ->dateTime()
+                    ->sortable(),
+                TextColumn::make('next_follow_at')
+                    ->label('下次跟进')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(),
+                TextColumn::make('owner.name')
+                    ->label('记录人')
+                    ->searchable(),
                 TextColumn::make('created_at')
+                    ->label('创建时间')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
+                    ->label('更新时间')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('deleted_at')
+                    ->label('删除时间')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('lead.company_name')
-                    ->searchable(),
-                TextColumn::make('customer.name')
-                    ->searchable(),
-                TextColumn::make('contact.name')
-                    ->searchable(),
+                    ->label('线索')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('opportunity.name')
-                    ->searchable(),
-                TextColumn::make('type')
-                    ->searchable(),
+                    ->label('商机')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('direction')
-                    ->searchable(),
-                TextColumn::make('subject')
-                    ->searchable(),
-                TextColumn::make('outcome')
-                    ->searchable(),
-                TextColumn::make('occurred_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('next_follow_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('owner.name')
-                    ->searchable(),
+                    ->label('方向')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 TrashedFilter::make(),
