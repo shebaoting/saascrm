@@ -3,7 +3,10 @@
 namespace App\Filament\Clusters\LeadCenter\Resources\MyLeads;
 
 use App\Filament\Clusters\LeadCenter\Resources\Leads\LeadResource;
-use App\Filament\Clusters\LeadCenter\Resources\MyLeads\Pages\ManageMyLeads;
+use App\Filament\Clusters\LeadCenter\Resources\MyLeads\Pages\CreateMyLead;
+use App\Filament\Clusters\LeadCenter\Resources\MyLeads\Pages\EditMyLead;
+use App\Filament\Clusters\LeadCenter\Resources\MyLeads\Pages\ListMyLeads;
+use App\Filament\Clusters\LeadCenter\Resources\MyLeads\Pages\ViewMyLead;
 use App\Models\Lead;
 use App\Support\CrmAccess;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,7 +46,10 @@ class MyLeadResource extends LeadResource
     public static function getPages(): array
     {
         return [
-            'index' => ManageMyLeads::route('/'),
+            'index' => ListMyLeads::route('/'),
+            'create' => CreateMyLead::route('/create'),
+            'view' => ViewMyLead::route('/{record}'),
+            'edit' => EditMyLead::route('/{record}/edit'),
         ];
     }
 }

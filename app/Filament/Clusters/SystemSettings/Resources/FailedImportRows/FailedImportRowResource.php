@@ -2,27 +2,20 @@
 
 namespace App\Filament\Clusters\SystemSettings\Resources\FailedImportRows;
 
-use App\Filament\Clusters\SystemSettings\Resources\FailedImportRows\Pages\ManageFailedImportRows;
+use App\Filament\Clusters\SystemSettings\Resources\FailedImportRows\Pages\CreateFailedImportRow;
+use App\Filament\Clusters\SystemSettings\Resources\FailedImportRows\Pages\EditFailedImportRow;
+use App\Filament\Clusters\SystemSettings\Resources\FailedImportRows\Pages\ListFailedImportRows;
+use App\Filament\Clusters\SystemSettings\Resources\FailedImportRows\Pages\ViewFailedImportRow;
+use App\Filament\Clusters\SystemSettings\Resources\FailedImportRows\Schemas\FailedImportRowForm;
+use App\Filament\Clusters\SystemSettings\Resources\FailedImportRows\Schemas\FailedImportRowInfolist;
+use App\Filament\Clusters\SystemSettings\Resources\FailedImportRows\Tables\FailedImportRowTable;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\FailedImportRow;
-use App\Services\Crm\DataPortService;
 use BackedEnum;
-use Filament\Actions\Action;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\KeyValue;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class FailedImportRowResource extends Resource
@@ -51,83 +44,26 @@ class FailedImportRowResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Select::make('import_id')
-                    ->relationship('import', 'file_name')
-                    ->required(),
-                KeyValue::make('data')
-                    ->required()
-                    ->columnSpanFull(),
-                Textarea::make('validation_error')
-                    ->columnSpanFull(),
-            ]);
+        return FailedImportRowForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('import.file_name')
-                    ->label('导入任务'),
-                TextEntry::make('validation_error')
-                    ->placeholder('-')
-                    ->columnSpanFull(),
-            ]);
+        return FailedImportRowInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('validation_error')
-            ->columns([
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('import.file_name')
-                    ->searchable(),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                Action::make('retry')
-                    ->label('重试')
-                    ->icon('heroicon-o-arrow-path')
-                    ->requiresConfirmation()
-                    ->action(function (FailedImportRow $record): void {
-                        $ok = app(DataPortService::class)->retryFailedRow($record, auth()->user());
-                        $notification = Notification::make()
-                            ->title($ok ? '重试成功' : '重试失败');
-
-                        ($ok ? $notification->success() : $notification->danger())->send();
-                    }),
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+        return FailedImportRowTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageFailedImportRows::route('/'),
+            'index' => ListFailedImportRows::route('/'),
+            'create' => CreateFailedImportRow::route('/create'),
+            'view' => ViewFailedImportRow::route('/{record}'),
+            'edit' => EditFailedImportRow::route('/{record}/edit'),
         ];
     }
 }

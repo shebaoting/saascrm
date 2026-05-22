@@ -3,34 +3,19 @@
 namespace App\Filament\Clusters\CustomerCenter\Resources\Contacts;
 
 use App\Filament\Clusters\CustomerCenter\CustomerCenterCluster;
-use App\Filament\Clusters\CustomerCenter\Resources\Contacts\Pages\ManageContacts;
+use App\Filament\Clusters\CustomerCenter\Resources\Contacts\Pages\CreateContact;
+use App\Filament\Clusters\CustomerCenter\Resources\Contacts\Pages\EditContact;
+use App\Filament\Clusters\CustomerCenter\Resources\Contacts\Pages\ListContacts;
+use App\Filament\Clusters\CustomerCenter\Resources\Contacts\Pages\ViewContact;
+use App\Filament\Clusters\CustomerCenter\Resources\Contacts\Schemas\ContactForm;
+use App\Filament\Clusters\CustomerCenter\Resources\Contacts\Schemas\ContactInfolist;
+use App\Filament\Clusters\CustomerCenter\Resources\Contacts\Tables\ContactTable;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Contact;
-use App\Support\Filament\CustomFieldUi;
-use App\Support\Filament\CrmUi;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\KeyValue;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
-use Filament\Infolists\Components\IconEntry;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -59,135 +44,26 @@ class ContactResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Select::make('customer_id')
-                    ->relationship('customer', 'name')
-                    ->required(),
-                TextInput::make('name')
-                    ->required(),
-                TextInput::make('phone')
-                    ->tel(),
-                TextInput::make('email')
-                    ->label('邮箱')
-                    ->email(),
-                TextInput::make('wechat_id'),
-                Select::make('gender')
-                    ->options(CrmUi::options('gender')),
-                TextInput::make('position'),
-                TextInput::make('department'),
-                TextInput::make('avatar'),
-                Toggle::make('is_primary')
-                    ->required(),
-                ...CustomFieldUi::formSections('contact'),
-            ]);
+        return ContactForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('deleted_at')
-                    ->dateTime()
-                    ->visible(fn (Contact $record): bool => $record->trashed()),
-                TextEntry::make('customer.name')
-                    ->label('客户'),
-                TextEntry::make('name'),
-                TextEntry::make('phone')
-                    ->placeholder('-'),
-                TextEntry::make('email')
-                    ->label('邮箱')
-                    ->placeholder('-'),
-                TextEntry::make('wechat_id')
-                    ->placeholder('-'),
-                TextEntry::make('gender')
-                    ->placeholder('-'),
-                TextEntry::make('position')
-                    ->placeholder('-'),
-                TextEntry::make('department')
-                    ->placeholder('-'),
-                TextEntry::make('avatar')
-                    ->placeholder('-'),
-                IconEntry::make('is_primary')
-                    ->boolean(),
-                ...CustomFieldUi::infolistSections('contact'),
-            ]);
+        return ContactInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('name')
-            ->columns([
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('customer.name')
-                    ->searchable(),
-                TextColumn::make('name')
-                    ->searchable(),
-                TextColumn::make('phone')
-                    ->searchable(),
-                TextColumn::make('email')
-                    ->label('邮箱')
-                    ->searchable(),
-                TextColumn::make('wechat_id')
-                    ->searchable(),
-                TextColumn::make('gender')
-                    ->searchable(),
-                TextColumn::make('position')
-                    ->searchable(),
-                TextColumn::make('department')
-                    ->searchable(),
-                TextColumn::make('avatar')
-                    ->searchable(),
-                IconColumn::make('is_primary')
-                    ->boolean(),
-                ...CustomFieldUi::tableColumns('contact'),
-            ])
-            ->filters([
-                SelectFilter::make('customer_id')
-                    ->relationship('customer', 'name'),
-                SelectFilter::make('gender')
-                    ->options(CrmUi::options('gender')),
-                TrashedFilter::make(),
-                ...CustomFieldUi::tableFilters('contact'),
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-                ForceDeleteAction::make(),
-                RestoreAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
-                ]),
-            ]);
+        return ContactTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageContacts::route('/'),
+            'index' => ListContacts::route('/'),
+            'create' => CreateContact::route('/create'),
+            'view' => ViewContact::route('/{record}'),
+            'edit' => EditContact::route('/{record}/edit'),
         ];
     }
 

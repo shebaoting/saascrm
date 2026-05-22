@@ -31,7 +31,6 @@ class LeadConversionService
                     'area_id' => $lead->area_id,
                     'email' => $lead->email,
                     'phone' => $lead->phone,
-                    'registered_address' => $lead->address,
                     'last_activity_at' => $lead->last_activity_at,
                     'next_activity_at' => $lead->next_activity_at,
                     'custom_fields' => $lead->custom_fields,

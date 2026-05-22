@@ -2,25 +2,20 @@
 
 namespace App\Filament\Clusters\SystemSettings\Resources\CustomFieldLayouts;
 
-use App\Filament\Clusters\SystemSettings\Resources\CustomFieldLayouts\Pages\ManageCustomFieldLayouts;
+use App\Filament\Clusters\SystemSettings\Resources\CustomFieldLayouts\Pages\CreateCustomFieldLayout;
+use App\Filament\Clusters\SystemSettings\Resources\CustomFieldLayouts\Pages\EditCustomFieldLayout;
+use App\Filament\Clusters\SystemSettings\Resources\CustomFieldLayouts\Pages\ListCustomFieldLayouts;
+use App\Filament\Clusters\SystemSettings\Resources\CustomFieldLayouts\Pages\ViewCustomFieldLayout;
+use App\Filament\Clusters\SystemSettings\Resources\CustomFieldLayouts\Schemas\CustomFieldLayoutForm;
+use App\Filament\Clusters\SystemSettings\Resources\CustomFieldLayouts\Schemas\CustomFieldLayoutInfolist;
+use App\Filament\Clusters\SystemSettings\Resources\CustomFieldLayouts\Tables\CustomFieldLayoutTable;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\CustomFieldLayout;
-use App\Support\Filament\CrmUi;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class CustomFieldLayoutResource extends Resource
@@ -49,86 +44,26 @@ class CustomFieldLayoutResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Select::make('model_type')
-                    ->options(CrmUi::options('target_type'))
-                    ->required(),
-                Select::make('role_id')
-                    ->relationship('role', 'name'),
-                Textarea::make('layout')
-                    ->rows(12)
-                    ->json()
-                    ->formatStateUsing(fn (mixed $state): string => json_encode($state ?: [
-                        'groups' => [
-                            ['name' => '基础信息', 'fields' => []],
-                            ['name' => '扩展字段', 'fields' => []],
-                        ],
-                        'hidden_fields' => [],
-                        'readonly_fields' => [],
-                        'list_columns' => [],
-                        'detail_fields' => [],
-                    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
-                    ->dehydrateStateUsing(fn (?string $state): array => json_decode($state ?: '{}', true) ?: [])
-                    ->required()
-                    ->columnSpanFull(),
-            ]);
+        return CustomFieldLayoutForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('model_type'),
-                TextEntry::make('role.name')
-                    ->label('角色')
-                    ->placeholder('-'),
-            ]);
+        return CustomFieldLayoutInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('model_type')
-            ->columns([
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('model_type')
-                    ->searchable(),
-                TextColumn::make('role.name')
-                    ->searchable(),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+        return CustomFieldLayoutTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageCustomFieldLayouts::route('/'),
+            'index' => ListCustomFieldLayouts::route('/'),
+            'create' => CreateCustomFieldLayout::route('/create'),
+            'view' => ViewCustomFieldLayout::route('/{record}'),
+            'edit' => EditCustomFieldLayout::route('/{record}/edit'),
         ];
     }
 }

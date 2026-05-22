@@ -3,23 +3,19 @@
 namespace App\Filament\Clusters\ProductPricing\Resources\PriceBookItems;
 
 use App\Filament\Clusters\ProductPricing\ProductPricingCluster;
-use App\Filament\Clusters\ProductPricing\Resources\PriceBookItems\Pages\ManagePriceBookItems;
+use App\Filament\Clusters\ProductPricing\Resources\PriceBookItems\Pages\CreatePriceBookItem;
+use App\Filament\Clusters\ProductPricing\Resources\PriceBookItems\Pages\EditPriceBookItem;
+use App\Filament\Clusters\ProductPricing\Resources\PriceBookItems\Pages\ListPriceBookItems;
+use App\Filament\Clusters\ProductPricing\Resources\PriceBookItems\Pages\ViewPriceBookItem;
+use App\Filament\Clusters\ProductPricing\Resources\PriceBookItems\Schemas\PriceBookItemForm;
+use App\Filament\Clusters\ProductPricing\Resources\PriceBookItems\Schemas\PriceBookItemInfolist;
+use App\Filament\Clusters\ProductPricing\Resources\PriceBookItems\Tables\PriceBookItemTable;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\PriceBookItem;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class PriceBookItemResource extends Resource
@@ -48,103 +44,26 @@ class PriceBookItemResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Select::make('price_book_id')
-                    ->relationship('priceBook', 'name')
-                    ->required(),
-                Select::make('product_sku_id')
-                    ->relationship('sku', 'sku_code')
-                    ->required(),
-                TextInput::make('price')
-                    ->required()
-                    ->numeric()
-                    ->default(0)
-                    ->prefix('$'),
-                TextInput::make('min_price')
-                    ->numeric()
-                    ->prefix('$'),
-                DateTimePicker::make('starts_at'),
-                DateTimePicker::make('ends_at'),
-            ]);
+        return PriceBookItemForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('priceBook.name')
-                    ->label('价格表'),
-                TextEntry::make('sku.sku_code'),
-                TextEntry::make('price')
-                    ->money(),
-                TextEntry::make('min_price')
-                    ->money()
-                    ->placeholder('-'),
-                TextEntry::make('starts_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('ends_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-            ]);
+        return PriceBookItemInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('price')
-            ->columns([
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('priceBook.name')
-                    ->searchable(),
-                TextColumn::make('sku.sku_code')
-                    ->searchable(),
-                TextColumn::make('price')
-                    ->money()
-                    ->sortable(),
-                TextColumn::make('min_price')
-                    ->money()
-                    ->sortable(),
-                TextColumn::make('starts_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('ends_at')
-                    ->dateTime()
-                    ->sortable(),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+        return PriceBookItemTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManagePriceBookItems::route('/'),
+            'index' => ListPriceBookItems::route('/'),
+            'create' => CreatePriceBookItem::route('/create'),
+            'view' => ViewPriceBookItem::route('/{record}'),
+            'edit' => EditPriceBookItem::route('/{record}/edit'),
         ];
     }
 }

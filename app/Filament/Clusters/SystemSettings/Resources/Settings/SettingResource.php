@@ -2,22 +2,20 @@
 
 namespace App\Filament\Clusters\SystemSettings\Resources\Settings;
 
-use App\Filament\Clusters\SystemSettings\Resources\Settings\Pages\ManageSettings;
+use App\Filament\Clusters\SystemSettings\Resources\Settings\Pages\CreateSetting;
+use App\Filament\Clusters\SystemSettings\Resources\Settings\Pages\EditSetting;
+use App\Filament\Clusters\SystemSettings\Resources\Settings\Pages\ListSettings;
+use App\Filament\Clusters\SystemSettings\Resources\Settings\Pages\ViewSetting;
+use App\Filament\Clusters\SystemSettings\Resources\Settings\Schemas\SettingForm;
+use App\Filament\Clusters\SystemSettings\Resources\Settings\Schemas\SettingInfolist;
+use App\Filament\Clusters\SystemSettings\Resources\Settings\Tables\SettingTable;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Setting;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class SettingResource extends Resource
@@ -46,66 +44,26 @@ class SettingResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextInput::make('key')
-                    ->required(),
-                TextInput::make('value'),
-            ]);
+        return SettingForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('tenant.name')
-                    ->label('租户')
-                    ->placeholder('-'),
-                TextEntry::make('key'),
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-            ]);
+        return SettingInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('key')
-            ->columns([
-                TextColumn::make('key')
-                    ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+        return SettingTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageSettings::route('/'),
+            'index' => ListSettings::route('/'),
+            'create' => CreateSetting::route('/create'),
+            'view' => ViewSetting::route('/{record}'),
+            'edit' => EditSetting::route('/{record}/edit'),
         ];
     }
 }

@@ -91,10 +91,18 @@ class CustomFieldUi
 
         return $fields
             ->groupBy(fn (CustomField $field): string => $field->group_name ?: '扩展字段')
-            ->map(fn (Collection $group, string $groupName): Section => Section::make($groupName)
-                ->schema($group->map(fn (CustomField $field): Component => self::formComponent($field))->all())
-                ->columns(2)
-                ->columnSpanFull())
+            ->map(function (Collection $group, string $groupName): Section {
+                $hasRequiredFields = $group->contains(fn (CustomField $field): bool => (bool) $field->is_required);
+
+                return Section::make($groupName)
+                    ->schema($group->map(fn (CustomField $field): Component => self::formComponent($field))->all())
+                    ->columns(['md' => 2])
+                    ->compact()
+                    ->collapsible()
+                    ->collapsed(! $hasRequiredFields)
+                    ->persistCollapsed(! $hasRequiredFields)
+                    ->columnSpanFull();
+            })
             ->values()
             ->all();
     }

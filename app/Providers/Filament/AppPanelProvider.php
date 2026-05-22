@@ -34,7 +34,7 @@ class AppPanelProvider extends PanelProvider
             ->path('app')
             ->login()
             ->colors([
-                'primary' => Color::Teal,
+                'primary' => Color::Green,
             ])
             ->viteTheme('resources/css/filament/app/theme.css')
             ->tenant(Tenant::class, slugAttribute: 'slug')

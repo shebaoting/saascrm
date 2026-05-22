@@ -3,31 +3,19 @@
 namespace App\Filament\Clusters\ActivityTasks\Resources\Tasks;
 
 use App\Filament\Clusters\ActivityTasks\ActivityTasksCluster;
-use App\Filament\Clusters\ActivityTasks\Resources\Tasks\Pages\ManageTasks;
+use App\Filament\Clusters\ActivityTasks\Resources\Tasks\Pages\CreateTask;
+use App\Filament\Clusters\ActivityTasks\Resources\Tasks\Pages\EditTask;
+use App\Filament\Clusters\ActivityTasks\Resources\Tasks\Pages\ListTasks;
+use App\Filament\Clusters\ActivityTasks\Resources\Tasks\Pages\ViewTask;
+use App\Filament\Clusters\ActivityTasks\Resources\Tasks\Schemas\TaskForm;
+use App\Filament\Clusters\ActivityTasks\Resources\Tasks\Schemas\TaskInfolist;
+use App\Filament\Clusters\ActivityTasks\Resources\Tasks\Tables\TaskTable;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Task;
 use BackedEnum;
-use Filament\Actions\Action;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -56,176 +44,26 @@ class TaskResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Select::make('lead_id')
-                    ->relationship('lead', 'company_name'),
-                Select::make('customer_id')
-                    ->relationship('customer', 'name'),
-                Select::make('contact_id')
-                    ->relationship('contact', 'name'),
-                Select::make('opportunity_id')
-                    ->relationship('opportunity', 'name'),
-                TextInput::make('title')
-                    ->required(),
-                Textarea::make('description')
-                    ->columnSpanFull(),
-                DateTimePicker::make('start_at'),
-                DateTimePicker::make('due_at'),
-                Select::make('assignee_id')
-                    ->relationship('assignee', 'name')
-                    ->default(fn (): ?int => auth()->id())
-                    ->required(),
-                Select::make('status')
-                    ->options([
-                        'not_started' => '未开始',
-                        'in_progress' => '进行中',
-                        'completed' => '已完成',
-                        'ignored' => '已忽略',
-                        'cancelled' => '已取消',
-                    ])
-                    ->required()
-                    ->default('not_started'),
-                Select::make('priority')
-                    ->options([
-                        'low' => '低',
-                        'normal' => '普通',
-                        'high' => '高',
-                        'urgent' => '紧急',
-                    ])
-                    ->required()
-                    ->default('normal'),
-            ]);
+        return TaskForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('deleted_at')
-                    ->dateTime()
-                    ->visible(fn (Task $record): bool => $record->trashed()),
-                TextEntry::make('lead.company_name')
-                    ->label('线索')
-                    ->placeholder('-'),
-                TextEntry::make('customer.name')
-                    ->label('客户')
-                    ->placeholder('-'),
-                TextEntry::make('contact.name')
-                    ->label('联系人')
-                    ->placeholder('-'),
-                TextEntry::make('opportunity.name')
-                    ->label('商机')
-                    ->placeholder('-'),
-                TextEntry::make('title'),
-                TextEntry::make('description')
-                    ->placeholder('-')
-                    ->columnSpanFull(),
-                TextEntry::make('start_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('due_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('completed_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('creator.name')
-                    ->label('创建人'),
-                TextEntry::make('assignee.name')
-                    ->label('负责人'),
-                TextEntry::make('status'),
-                TextEntry::make('priority'),
-            ]);
+        return TaskInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('title')
-            ->columns([
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('lead.company_name')
-                    ->searchable(),
-                TextColumn::make('customer.name')
-                    ->searchable(),
-                TextColumn::make('contact.name')
-                    ->searchable(),
-                TextColumn::make('opportunity.name')
-                    ->searchable(),
-                TextColumn::make('title')
-                    ->searchable(),
-                TextColumn::make('start_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('due_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('completed_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('creator.name')
-                    ->searchable(),
-                TextColumn::make('assignee.name')
-                    ->searchable(),
-                TextColumn::make('status')
-                    ->searchable(),
-                TextColumn::make('priority')
-                    ->searchable(),
-            ])
-            ->filters([
-                TrashedFilter::make(),
-            ])
-            ->recordActions([
-                Action::make('complete')
-                    ->label('完成')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(fn (Task $record): bool => $record->status !== 'completed')
-                    ->action(function (Task $record): void {
-                        $record->forceFill([
-                            'status' => 'completed',
-                            'completed_at' => now(),
-                        ])->save();
-
-                        Notification::make()->success()->title('任务已完成')->send();
-                    }),
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-                ForceDeleteAction::make(),
-                RestoreAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
-                ]),
-            ]);
+        return TaskTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageTasks::route('/'),
+            'index' => ListTasks::route('/'),
+            'create' => CreateTask::route('/create'),
+            'view' => ViewTask::route('/{record}'),
+            'edit' => EditTask::route('/{record}/edit'),
         ];
     }
 

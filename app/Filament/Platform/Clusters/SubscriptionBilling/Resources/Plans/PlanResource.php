@@ -2,26 +2,19 @@
 
 namespace App\Filament\Platform\Clusters\SubscriptionBilling\Resources\Plans;
 
-use App\Filament\Platform\Clusters\SubscriptionBilling\Resources\Plans\Pages\ManagePlans;
+use App\Filament\Platform\Clusters\SubscriptionBilling\Resources\Plans\Pages\CreatePlan;
+use App\Filament\Platform\Clusters\SubscriptionBilling\Resources\Plans\Pages\EditPlan;
+use App\Filament\Platform\Clusters\SubscriptionBilling\Resources\Plans\Pages\ListPlans;
+use App\Filament\Platform\Clusters\SubscriptionBilling\Resources\Plans\Pages\ViewPlan;
+use App\Filament\Platform\Clusters\SubscriptionBilling\Resources\Plans\Schemas\PlanForm;
+use App\Filament\Platform\Clusters\SubscriptionBilling\Resources\Plans\Schemas\PlanInfolist;
+use App\Filament\Platform\Clusters\SubscriptionBilling\Resources\Plans\Tables\PlanTable;
 use App\Filament\Platform\Clusters\SubscriptionBilling\SubscriptionBillingCluster;
 use App\Models\Plan;
-use App\Services\Crm\PlanLimitService;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
-use Filament\Infolists\Components\IconEntry;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class PlanResource extends Resource
@@ -46,185 +39,26 @@ class PlanResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextInput::make('name')
-                    ->required(),
-                TextInput::make('code')
-                    ->required(),
-                TextInput::make('price_monthly')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('price_yearly')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('max_users')
-                    ->numeric(),
-                TextInput::make('max_leads')
-                    ->numeric(),
-                TextInput::make('max_customers')
-                    ->numeric(),
-                TextInput::make('max_storage_mb')
-                    ->numeric(),
-                TextInput::make('max_custom_fields')
-                    ->numeric(),
-                TextInput::make('max_automation_rules')
-                    ->numeric(),
-                TextInput::make('max_imports_daily')
-                    ->numeric(),
-                TextInput::make('max_exports_daily')
-                    ->numeric(),
-                CheckboxList::make('features')
-                    ->label('功能开关')
-                    ->options(PlanLimitService::featureLabels())
-                    ->columns(3)
-                    ->afterStateHydrated(function ($component, ?array $state): void {
-                        $component->state(collect($state ?: [])
-                            ->filter(fn (mixed $enabled): bool => (bool) $enabled)
-                            ->keys()
-                            ->all());
-                    })
-                    ->dehydrateStateUsing(fn (?array $state): array => collect(PlanLimitService::featureLabels())
-                        ->mapWithKeys(fn (string $label, string $key): array => [$key => in_array($key, $state ?: [], true)])
-                        ->all()),
-                Toggle::make('is_active')
-                    ->required(),
-            ]);
+        return PlanForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('name'),
-                TextEntry::make('code'),
-                TextEntry::make('price_monthly')
-                    ->numeric(),
-                TextEntry::make('price_yearly')
-                    ->numeric(),
-                TextEntry::make('max_users')
-                    ->numeric()
-                    ->placeholder('-'),
-                TextEntry::make('max_leads')
-                    ->numeric()
-                    ->placeholder('-'),
-                TextEntry::make('max_customers')
-                    ->numeric()
-                    ->placeholder('-'),
-                TextEntry::make('max_storage_mb')
-                    ->numeric()
-                    ->placeholder('-'),
-                TextEntry::make('max_custom_fields')
-                    ->numeric()
-                    ->placeholder('-'),
-                TextEntry::make('max_automation_rules')
-                    ->numeric()
-                    ->placeholder('-'),
-                TextEntry::make('max_imports_daily')
-                    ->numeric()
-                    ->placeholder('-'),
-                TextEntry::make('max_exports_daily')
-                    ->numeric()
-                    ->placeholder('-'),
-                TextEntry::make('features')
-                    ->formatStateUsing(fn (?array $state): string => collect($state ?: [])
-                        ->filter()
-                        ->keys()
-                        ->map(fn (string $key): string => PlanLimitService::featureLabels()[$key] ?? $key)
-                        ->join('、'))
-                    ->placeholder('-'),
-                IconEntry::make('is_active')
-                    ->boolean(),
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-            ]);
+        return PlanInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('name')
-            ->columns([
-                TextColumn::make('name')
-                    ->searchable(),
-                TextColumn::make('code')
-                    ->searchable(),
-                TextColumn::make('price_monthly')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('price_yearly')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('max_users')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('max_leads')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('max_customers')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('max_storage_mb')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('max_custom_fields')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('max_automation_rules')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('max_imports_daily')
-                    ->numeric()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('max_exports_daily')
-                    ->numeric()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('features')
-                    ->formatStateUsing(fn (?array $state): string => collect($state ?: [])
-                        ->filter()
-                        ->keys()
-                        ->map(fn (string $key): string => PlanLimitService::featureLabels()[$key] ?? $key)
-                        ->join('、'))
-                    ->wrap()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                IconColumn::make('is_active')
-                    ->boolean(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+        return PlanTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManagePlans::route('/'),
+            'index' => ListPlans::route('/'),
+            'create' => CreatePlan::route('/create'),
+            'view' => ViewPlan::route('/{record}'),
+            'edit' => EditPlan::route('/{record}/edit'),
         ];
     }
 }

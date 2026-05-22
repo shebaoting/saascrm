@@ -237,11 +237,6 @@ return new class extends Migration
             $table->string('area_id', 20)->nullable();
             $table->string('email')->nullable();
             $table->string('phone', 50)->nullable();
-            $table->string('registered_address', 500)->nullable();
-            $table->string('website')->nullable();
-            $table->string('industry', 100)->nullable();
-            $table->string('company_size', 50)->nullable();
-            $table->decimal('annual_revenue', 15, 2)->nullable();
             $table->timestamp('pool_entered_at')->nullable();
             $table->timestamp('last_activity_at')->nullable()->index();
             $table->timestamp('next_activity_at')->nullable()->index();

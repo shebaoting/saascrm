@@ -15,7 +15,6 @@ class Customer extends TenantModel
     protected $casts = [
         'tags' => 'array',
         'custom_fields' => 'array',
-        'annual_revenue' => 'decimal:2',
         'pool_entered_at' => 'datetime',
         'last_activity_at' => 'datetime',
         'next_activity_at' => 'datetime',
@@ -31,8 +30,7 @@ class Customer extends TenantModel
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'customer_users')
-            ->withPivot(['tenant_id', 'role', 'assigned_by', 'assigned_at'])
-            ->withTimestamps();
+            ->withPivot(['tenant_id', 'role', 'assigned_by', 'assigned_at']);
     }
 
     public function contacts(): HasMany

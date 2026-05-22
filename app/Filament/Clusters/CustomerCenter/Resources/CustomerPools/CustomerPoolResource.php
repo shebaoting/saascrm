@@ -2,7 +2,10 @@
 
 namespace App\Filament\Clusters\CustomerCenter\Resources\CustomerPools;
 
-use App\Filament\Clusters\CustomerCenter\Resources\CustomerPools\Pages\ManageCustomerPools;
+use App\Filament\Clusters\CustomerCenter\Resources\CustomerPools\Pages\CreateCustomerPool;
+use App\Filament\Clusters\CustomerCenter\Resources\CustomerPools\Pages\EditCustomerPool;
+use App\Filament\Clusters\CustomerCenter\Resources\CustomerPools\Pages\ListCustomerPools;
+use App\Filament\Clusters\CustomerCenter\Resources\CustomerPools\Pages\ViewCustomerPool;
 use App\Filament\Clusters\CustomerCenter\Resources\Customers\CustomerResource;
 use App\Models\Customer;
 use App\Support\CrmAccess;
@@ -47,7 +50,10 @@ class CustomerPoolResource extends CustomerResource
     public static function getPages(): array
     {
         return [
-            'index' => ManageCustomerPools::route('/'),
+            'index' => ListCustomerPools::route('/'),
+            'create' => CreateCustomerPool::route('/create'),
+            'view' => ViewCustomerPool::route('/{record}'),
+            'edit' => EditCustomerPool::route('/{record}/edit'),
         ];
     }
 }

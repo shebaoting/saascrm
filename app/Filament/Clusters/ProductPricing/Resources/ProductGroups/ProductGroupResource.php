@@ -3,26 +3,19 @@
 namespace App\Filament\Clusters\ProductPricing\Resources\ProductGroups;
 
 use App\Filament\Clusters\ProductPricing\ProductPricingCluster;
-use App\Filament\Clusters\ProductPricing\Resources\ProductGroups\Pages\ManageProductGroups;
+use App\Filament\Clusters\ProductPricing\Resources\ProductGroups\Pages\CreateProductGroup;
+use App\Filament\Clusters\ProductPricing\Resources\ProductGroups\Pages\EditProductGroup;
+use App\Filament\Clusters\ProductPricing\Resources\ProductGroups\Pages\ListProductGroups;
+use App\Filament\Clusters\ProductPricing\Resources\ProductGroups\Pages\ViewProductGroup;
+use App\Filament\Clusters\ProductPricing\Resources\ProductGroups\Schemas\ProductGroupForm;
+use App\Filament\Clusters\ProductPricing\Resources\ProductGroups\Schemas\ProductGroupInfolist;
+use App\Filament\Clusters\ProductPricing\Resources\ProductGroups\Tables\ProductGroupTable;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\ProductGroup;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -51,82 +44,26 @@ class ProductGroupResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextInput::make('name')
-                    ->required(),
-                TextInput::make('sort_order')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-            ]);
+        return ProductGroupForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('deleted_at')
-                    ->dateTime()
-                    ->visible(fn (ProductGroup $record): bool => $record->trashed()),
-                TextEntry::make('name'),
-                TextEntry::make('sort_order')
-                    ->numeric(),
-            ]);
+        return ProductGroupInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('name')
-            ->columns([
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('name')
-                    ->searchable(),
-                TextColumn::make('sort_order')
-                    ->numeric()
-                    ->sortable(),
-            ])
-            ->filters([
-                TrashedFilter::make(),
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-                ForceDeleteAction::make(),
-                RestoreAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
-                ]),
-            ]);
+        return ProductGroupTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageProductGroups::route('/'),
+            'index' => ListProductGroups::route('/'),
+            'create' => CreateProductGroup::route('/create'),
+            'view' => ViewProductGroup::route('/{record}'),
+            'edit' => EditProductGroup::route('/{record}/edit'),
         ];
     }
 

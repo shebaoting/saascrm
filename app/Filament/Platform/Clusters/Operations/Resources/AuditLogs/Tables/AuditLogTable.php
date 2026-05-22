@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Filament\Platform\Clusters\Operations\Resources\AuditLogs\Tables;
+
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+
+class AuditLogTable
+{
+    public static function configure(Table $table): Table
+    {
+        return $table
+            ->recordTitleAttribute('action')
+            ->columns([
+                TextColumn::make('tenant.name')
+                    ->searchable(),
+                TextColumn::make('user.name')
+                    ->searchable(),
+                TextColumn::make('action')
+                    ->searchable(),
+                TextColumn::make('model_type')
+                    ->searchable(),
+                TextColumn::make('model_id')
+                    ->numeric()
+                    ->sortable(),
+                TextColumn::make('ip_address')
+                    ->searchable(),
+                TextColumn::make('user_agent')
+                    ->searchable(),
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                //
+            ])
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+}

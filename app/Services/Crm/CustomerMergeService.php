@@ -107,6 +107,6 @@ class CustomerMergeService
      */
     private function mergeableFields(): array
     {
-        return ['phone', 'email', 'website', 'industry', 'company_size', 'registered_address'];
+        return ['phone', 'email'];
     }
 }

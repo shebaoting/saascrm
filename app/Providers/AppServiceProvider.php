@@ -34,6 +34,7 @@ use App\Services\Crm\OrderFinanceService;
 use App\Services\Crm\PlanLimitService;
 use App\Services\Crm\QuoteCalculatorService;
 use App\Support\Filament\CrmUi;
+use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -123,8 +124,14 @@ class AppServiceProvider extends ServiceProvider
         Lead::saving(fn (Lead $lead): bool => $this->normalizeContactFields($lead));
 
         Lead::creating(function (Lead $lead): void {
+            $tenantId = (int) ($lead->tenant_id ?: Filament::getTenant()?->getKey());
+
+            if (! $lead->tenant_id && $tenantId) {
+                $lead->tenant_id = $tenantId;
+            }
+
             if (Schema::hasColumn($lead->getTable(), 'lead_number')) {
-                $lead->lead_number = $lead->lead_number ?: app(BusinessNumberService::class)->next((int) $lead->tenant_id, 'lead');
+                $lead->lead_number = $lead->lead_number ?: app(BusinessNumberService::class)->next($tenantId, 'lead');
             }
 
             app(DuplicateDetectionService::class)->assertNoDuplicateOnCreate($lead);
@@ -138,8 +145,14 @@ class AppServiceProvider extends ServiceProvider
         Customer::saving(fn (Customer $customer): bool => $this->normalizeContactFields($customer));
 
         Customer::creating(function (Customer $customer): void {
+            $tenantId = (int) ($customer->tenant_id ?: Filament::getTenant()?->getKey());
+
+            if (! $customer->tenant_id && $tenantId) {
+                $customer->tenant_id = $tenantId;
+            }
+
             if (Schema::hasColumn($customer->getTable(), 'customer_number')) {
-                $customer->customer_number = $customer->customer_number ?: app(BusinessNumberService::class)->next((int) $customer->tenant_id, 'customer');
+                $customer->customer_number = $customer->customer_number ?: app(BusinessNumberService::class)->next($tenantId, 'customer');
             }
 
             app(DuplicateDetectionService::class)->assertNoDuplicateOnCreate($customer);

@@ -3,20 +3,18 @@
 namespace App\Filament\Platform\Clusters\Operations\Resources\Permissions;
 
 use App\Filament\Platform\Clusters\Operations\OperationsCluster;
-use App\Filament\Platform\Clusters\Operations\Resources\Permissions\Pages\ManagePermissions;
+use App\Filament\Platform\Clusters\Operations\Resources\Permissions\Pages\CreatePermission;
+use App\Filament\Platform\Clusters\Operations\Resources\Permissions\Pages\EditPermission;
+use App\Filament\Platform\Clusters\Operations\Resources\Permissions\Pages\ListPermissions;
+use App\Filament\Platform\Clusters\Operations\Resources\Permissions\Pages\ViewPermission;
+use App\Filament\Platform\Clusters\Operations\Resources\Permissions\Schemas\PermissionForm;
+use App\Filament\Platform\Clusters\Operations\Resources\Permissions\Schemas\PermissionInfolist;
+use App\Filament\Platform\Clusters\Operations\Resources\Permissions\Tables\PermissionTable;
 use App\Models\Permission;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class PermissionResource extends Resource
@@ -41,78 +39,26 @@ class PermissionResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextInput::make('name')
-                    ->required(),
-                TextInput::make('guard_name')
-                    ->required()
-                    ->default('web'),
-                TextInput::make('label'),
-                TextInput::make('group'),
-            ]);
+        return PermissionForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('name'),
-                TextEntry::make('guard_name'),
-                TextEntry::make('label')
-                    ->placeholder('-'),
-                TextEntry::make('group')
-                    ->placeholder('-'),
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-            ]);
+        return PermissionInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('name')
-            ->columns([
-                TextColumn::make('name')
-                    ->searchable(),
-                TextColumn::make('guard_name')
-                    ->searchable(),
-                TextColumn::make('label')
-                    ->searchable(),
-                TextColumn::make('group')
-                    ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+        return PermissionTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManagePermissions::route('/'),
+            'index' => ListPermissions::route('/'),
+            'create' => CreatePermission::route('/create'),
+            'view' => ViewPermission::route('/{record}'),
+            'edit' => EditPermission::route('/{record}/edit'),
         ];
     }
 }

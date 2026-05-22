@@ -2,28 +2,23 @@
 
 namespace App\Filament\Clusters\SalesProcess\Resources\SalesTargets;
 
-use App\Filament\Clusters\SalesProcess\Resources\SalesTargets\Pages\ManageSalesTargets;
+use App\Filament\Clusters\SalesProcess\Resources\SalesTargets\Pages\CreateSalesTarget;
+use App\Filament\Clusters\SalesProcess\Resources\SalesTargets\Pages\EditSalesTarget;
+use App\Filament\Clusters\SalesProcess\Resources\SalesTargets\Pages\ListSalesTargets;
+use App\Filament\Clusters\SalesProcess\Resources\SalesTargets\Pages\ViewSalesTarget;
+use App\Filament\Clusters\SalesProcess\Resources\SalesTargets\Schemas\SalesTargetForm;
+use App\Filament\Clusters\SalesProcess\Resources\SalesTargets\Schemas\SalesTargetInfolist;
+use App\Filament\Clusters\SalesProcess\Resources\SalesTargets\Tables\SalesTargetTable;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Department;
 use App\Models\SalesTarget;
 use App\Models\User;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class SalesTargetResource extends Resource
@@ -50,136 +45,30 @@ class SalesTargetResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Select::make('target_type')
-                    ->options(static::targetTypeOptions())
-                    ->required()
-                    ->default('user')
-                    ->live()
-                    ->afterStateUpdated(fn ($state, callable $set) => $set('target_id', null)),
-                Select::make('target_id')
-                    ->label('目标对象')
-                    ->options(fn (Get $get): array => static::targetOptions($get('target_type')))
-                    ->visible(fn (Get $get): bool => $get('target_type') !== 'tenant')
-                    ->required(fn (Get $get): bool => $get('target_type') !== 'tenant'),
-                Select::make('period_type')
-                    ->options([
-                        'week' => '周',
-                        'month' => '月',
-                        'quarter' => '季度',
-                        'year' => '年',
-                    ])
-                    ->required()
-                    ->default('month'),
-                DatePicker::make('period_start')
-                    ->required(),
-                DatePicker::make('period_end')
-                    ->required(),
-                TextInput::make('target_amount')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('target_payment_amount')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('target_customer_count')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-            ]);
+        return SalesTargetForm::configure($schema, static::class);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('target_type'),
-                TextEntry::make('target_id')
-                    ->label('目标对象')
-                    ->formatStateUsing(fn ($state, SalesTarget $record): string => static::targetDisplay($record))
-                    ->placeholder('-'),
-                TextEntry::make('period_type'),
-                TextEntry::make('period_start')
-                    ->date(),
-                TextEntry::make('period_end')
-                    ->date(),
-                TextEntry::make('target_amount')
-                    ->numeric(),
-                TextEntry::make('target_payment_amount')
-                    ->numeric(),
-                TextEntry::make('target_customer_count')
-                    ->numeric(),
-            ]);
+        return SalesTargetInfolist::configure($schema, static::class);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('target_type')
-            ->columns([
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('target_type')
-                    ->searchable(),
-                TextColumn::make('target_id')
-                    ->label('目标对象')
-                    ->formatStateUsing(fn ($state, SalesTarget $record): string => static::targetDisplay($record))
-                    ->sortable(),
-                TextColumn::make('period_type')
-                    ->searchable(),
-                TextColumn::make('period_start')
-                    ->date()
-                    ->sortable(),
-                TextColumn::make('period_end')
-                    ->date()
-                    ->sortable(),
-                TextColumn::make('target_amount')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('target_payment_amount')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('target_customer_count')
-                    ->numeric()
-                    ->sortable(),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+        return SalesTargetTable::configure($table, static::class);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageSalesTargets::route('/'),
+            'index' => ListSalesTargets::route('/'),
+            'create' => CreateSalesTarget::route('/create'),
+            'view' => ViewSalesTarget::route('/{record}'),
+            'edit' => EditSalesTarget::route('/{record}/edit'),
         ];
     }
 
-    private static function targetTypeOptions(): array
+    public static function targetTypeOptions(): array
     {
         return [
             'tenant' => '全公司',
@@ -188,7 +77,7 @@ class SalesTargetResource extends Resource
         ];
     }
 
-    private static function targetOptions(?string $targetType): array
+    public static function targetOptions(?string $targetType): array
     {
         $tenantId = Filament::getTenant()?->getKey()
             ?? (app()->bound('currentTenant') ? app('currentTenant')?->getKey() : null);
@@ -208,7 +97,7 @@ class SalesTargetResource extends Resource
         };
     }
 
-    private static function targetDisplay(SalesTarget $record): string
+    public static function targetDisplay(SalesTarget $record): string
     {
         if ($record->target_type === 'tenant') {
             return '全公司';

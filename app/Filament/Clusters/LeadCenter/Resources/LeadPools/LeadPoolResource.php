@@ -2,7 +2,10 @@
 
 namespace App\Filament\Clusters\LeadCenter\Resources\LeadPools;
 
-use App\Filament\Clusters\LeadCenter\Resources\LeadPools\Pages\ManageLeadPools;
+use App\Filament\Clusters\LeadCenter\Resources\LeadPools\Pages\CreateLeadPool;
+use App\Filament\Clusters\LeadCenter\Resources\LeadPools\Pages\EditLeadPool;
+use App\Filament\Clusters\LeadCenter\Resources\LeadPools\Pages\ListLeadPools;
+use App\Filament\Clusters\LeadCenter\Resources\LeadPools\Pages\ViewLeadPool;
 use App\Filament\Clusters\LeadCenter\Resources\Leads\LeadResource;
 use App\Models\Lead;
 use App\Support\CrmAccess;
@@ -47,7 +50,10 @@ class LeadPoolResource extends LeadResource
     public static function getPages(): array
     {
         return [
-            'index' => ManageLeadPools::route('/'),
+            'index' => ListLeadPools::route('/'),
+            'create' => CreateLeadPool::route('/create'),
+            'view' => ViewLeadPool::route('/{record}'),
+            'edit' => EditLeadPool::route('/{record}/edit'),
         ];
     }
 }

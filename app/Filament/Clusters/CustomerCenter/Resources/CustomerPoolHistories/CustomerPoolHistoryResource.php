@@ -3,23 +3,19 @@
 namespace App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories;
 
 use App\Filament\Clusters\CustomerCenter\CustomerCenterCluster;
-use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories\Pages\ManageCustomerPoolHistories;
+use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories\Pages\CreateCustomerPoolHistory;
+use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories\Pages\EditCustomerPoolHistory;
+use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories\Pages\ListCustomerPoolHistories;
+use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories\Pages\ViewCustomerPoolHistory;
+use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories\Schemas\CustomerPoolHistoryForm;
+use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories\Schemas\CustomerPoolHistoryInfolist;
+use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories\Tables\CustomerPoolHistoryTable;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\CustomerPoolHistory;
-use App\Support\Filament\CrmUi;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class CustomerPoolHistoryResource extends Resource
@@ -53,92 +49,26 @@ class CustomerPoolHistoryResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Select::make('target_type')
-                    ->options(CrmUi::options('target_type'))
-                    ->required(),
-                TextInput::make('target_id')
-                    ->required()
-                    ->numeric(),
-                Select::make('action')
-                    ->options([
-                        'claim' => '领取',
-                        'release' => '释放',
-                        'transfer' => '转移',
-                        'auto_recycle' => '自动回收',
-                    ])
-                    ->required(),
-                Select::make('from_user_id')
-                    ->relationship('fromUser', 'name'),
-                Select::make('to_user_id')
-                    ->relationship('toUser', 'name'),
-                TextInput::make('reason'),
-                Select::make('operated_by')
-                    ->relationship('operatorUser', 'name'),
-            ]);
+        return CustomerPoolHistoryForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('target_type'),
-                TextEntry::make('target_id')
-                    ->numeric(),
-                TextEntry::make('action'),
-                TextEntry::make('fromUser.name')
-                    ->placeholder('-'),
-                TextEntry::make('toUser.name')
-                    ->placeholder('-'),
-                TextEntry::make('reason')
-                    ->placeholder('-'),
-                TextEntry::make('operatorUser.name')
-                    ->placeholder('-'),
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-            ]);
+        return CustomerPoolHistoryInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('target_type')
-            ->columns([
-                TextColumn::make('target_type')
-                    ->searchable(),
-                TextColumn::make('target_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('action')
-                    ->searchable(),
-                TextColumn::make('fromUser.name')
-                    ->searchable(),
-                TextColumn::make('toUser.name')
-                    ->searchable(),
-                TextColumn::make('reason')
-                    ->searchable(),
-                TextColumn::make('operatorUser.name')
-                    ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-            ])
-            ->toolbarActions([]);
+        return CustomerPoolHistoryTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageCustomerPoolHistories::route('/'),
+            'index' => ListCustomerPoolHistories::route('/'),
+            'create' => CreateCustomerPoolHistory::route('/create'),
+            'view' => ViewCustomerPoolHistory::route('/{record}'),
+            'edit' => EditCustomerPoolHistory::route('/{record}/edit'),
         ];
     }
 }

@@ -3,29 +3,19 @@
 namespace App\Filament\Clusters\KnowledgeBase\Resources\KbArticles;
 
 use App\Filament\Clusters\KnowledgeBase\KnowledgeBaseCluster;
-use App\Filament\Clusters\KnowledgeBase\Resources\KbArticles\Pages\ManageKbArticles;
+use App\Filament\Clusters\KnowledgeBase\Resources\KbArticles\Pages\CreateKbArticle;
+use App\Filament\Clusters\KnowledgeBase\Resources\KbArticles\Pages\EditKbArticle;
+use App\Filament\Clusters\KnowledgeBase\Resources\KbArticles\Pages\ListKbArticles;
+use App\Filament\Clusters\KnowledgeBase\Resources\KbArticles\Pages\ViewKbArticle;
+use App\Filament\Clusters\KnowledgeBase\Resources\KbArticles\Schemas\KbArticleForm;
+use App\Filament\Clusters\KnowledgeBase\Resources\KbArticles\Schemas\KbArticleInfolist;
+use App\Filament\Clusters\KnowledgeBase\Resources\KbArticles\Tables\KbArticleTable;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\KbArticle;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -54,108 +44,26 @@ class KbArticleResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextInput::make('title')
-                    ->required(),
-                Textarea::make('content')
-                    ->required()
-                    ->columnSpanFull(),
-                Select::make('kb_category_id')
-                    ->relationship('category', 'name'),
-                Select::make('user_id')
-                    ->relationship('author', 'name'),
-                Select::make('status')
-                    ->options([
-                        'draft' => '草稿',
-                        'published' => '已发布',
-                        'archived' => '已归档',
-                    ])
-                    ->required()
-                    ->default('draft'),
-                DateTimePicker::make('published_at'),
-            ]);
+        return KbArticleForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('deleted_at')
-                    ->dateTime()
-                    ->visible(fn (KbArticle $record): bool => $record->trashed()),
-                TextEntry::make('title'),
-                TextEntry::make('content')
-                    ->columnSpanFull(),
-                TextEntry::make('category.name')
-                    ->placeholder('-'),
-                TextEntry::make('author.name')
-                    ->placeholder('-'),
-                TextEntry::make('status'),
-                TextEntry::make('published_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-            ]);
+        return KbArticleInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('title')
-            ->columns([
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('title')
-                    ->searchable(),
-                TextColumn::make('category.name')
-                    ->searchable(),
-                TextColumn::make('author.name')
-                    ->searchable(),
-                TextColumn::make('status')
-                    ->searchable(),
-                TextColumn::make('published_at')
-                    ->dateTime()
-                    ->sortable(),
-            ])
-            ->filters([
-                TrashedFilter::make(),
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-                ForceDeleteAction::make(),
-                RestoreAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
-                ]),
-            ]);
+        return KbArticleTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageKbArticles::route('/'),
+            'index' => ListKbArticles::route('/'),
+            'create' => CreateKbArticle::route('/create'),
+            'view' => ViewKbArticle::route('/{record}'),
+            'edit' => EditKbArticle::route('/{record}/edit'),
         ];
     }
 

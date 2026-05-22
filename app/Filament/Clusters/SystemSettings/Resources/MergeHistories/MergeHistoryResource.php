@@ -2,23 +2,20 @@
 
 namespace App\Filament\Clusters\SystemSettings\Resources\MergeHistories;
 
-use App\Filament\Clusters\SystemSettings\Resources\MergeHistories\Pages\ManageMergeHistories;
+use App\Filament\Clusters\SystemSettings\Resources\MergeHistories\Pages\CreateMergeHistory;
+use App\Filament\Clusters\SystemSettings\Resources\MergeHistories\Pages\EditMergeHistory;
+use App\Filament\Clusters\SystemSettings\Resources\MergeHistories\Pages\ListMergeHistories;
+use App\Filament\Clusters\SystemSettings\Resources\MergeHistories\Pages\ViewMergeHistory;
+use App\Filament\Clusters\SystemSettings\Resources\MergeHistories\Schemas\MergeHistoryForm;
+use App\Filament\Clusters\SystemSettings\Resources\MergeHistories\Schemas\MergeHistoryInfolist;
+use App\Filament\Clusters\SystemSettings\Resources\MergeHistories\Tables\MergeHistoryTable;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\MergeHistory;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class MergeHistoryResource extends Resource
@@ -52,73 +49,26 @@ class MergeHistoryResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextInput::make('model_type')
-                    ->required(),
-                TextInput::make('source_id')
-                    ->required()
-                    ->numeric(),
-                TextInput::make('target_id')
-                    ->required()
-                    ->numeric(),
-                TextInput::make('merged_fields'),
-                TextInput::make('merged_relations'),
-                Select::make('merged_by')
-                    ->relationship('mergedBy', 'name')
-                    ->required(),
-            ]);
+        return MergeHistoryForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('model_type'),
-                TextEntry::make('source_id')
-                    ->numeric(),
-                TextEntry::make('target_id')
-                    ->numeric(),
-                TextEntry::make('mergedBy.name'),
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-            ]);
+        return MergeHistoryInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('model_type')
-            ->columns([
-                TextColumn::make('model_type')
-                    ->searchable(),
-                TextColumn::make('source_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('target_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('mergedBy.name')
-                    ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-            ])
-            ->toolbarActions([]);
+        return MergeHistoryTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageMergeHistories::route('/'),
+            'index' => ListMergeHistories::route('/'),
+            'create' => CreateMergeHistory::route('/create'),
+            'view' => ViewMergeHistory::route('/{record}'),
+            'edit' => EditMergeHistory::route('/{record}/edit'),
         ];
     }
 }

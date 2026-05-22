@@ -3,7 +3,10 @@
 namespace App\Filament\Clusters\CustomerCenter\Resources\MyCustomers;
 
 use App\Filament\Clusters\CustomerCenter\Resources\Customers\CustomerResource;
-use App\Filament\Clusters\CustomerCenter\Resources\MyCustomers\Pages\ManageMyCustomers;
+use App\Filament\Clusters\CustomerCenter\Resources\MyCustomers\Pages\CreateMyCustomer;
+use App\Filament\Clusters\CustomerCenter\Resources\MyCustomers\Pages\EditMyCustomer;
+use App\Filament\Clusters\CustomerCenter\Resources\MyCustomers\Pages\ListMyCustomers;
+use App\Filament\Clusters\CustomerCenter\Resources\MyCustomers\Pages\ViewMyCustomer;
 use App\Models\Customer;
 use App\Support\CrmAccess;
 use Illuminate\Database\Eloquent\Builder;
@@ -47,7 +50,10 @@ class MyCustomerResource extends CustomerResource
     public static function getPages(): array
     {
         return [
-            'index' => ManageMyCustomers::route('/'),
+            'index' => ListMyCustomers::route('/'),
+            'create' => CreateMyCustomer::route('/create'),
+            'view' => ViewMyCustomer::route('/{record}'),
+            'edit' => EditMyCustomer::route('/{record}/edit'),
         ];
     }
 }

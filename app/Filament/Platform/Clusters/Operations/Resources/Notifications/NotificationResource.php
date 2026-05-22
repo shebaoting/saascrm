@@ -3,22 +3,18 @@
 namespace App\Filament\Platform\Clusters\Operations\Resources\Notifications;
 
 use App\Filament\Platform\Clusters\Operations\OperationsCluster;
-use App\Filament\Platform\Clusters\Operations\Resources\Notifications\Pages\ManageNotifications;
+use App\Filament\Platform\Clusters\Operations\Resources\Notifications\Pages\CreateNotification;
+use App\Filament\Platform\Clusters\Operations\Resources\Notifications\Pages\EditNotification;
+use App\Filament\Platform\Clusters\Operations\Resources\Notifications\Pages\ListNotifications;
+use App\Filament\Platform\Clusters\Operations\Resources\Notifications\Pages\ViewNotification;
+use App\Filament\Platform\Clusters\Operations\Resources\Notifications\Schemas\NotificationForm;
+use App\Filament\Platform\Clusters\Operations\Resources\Notifications\Schemas\NotificationInfolist;
+use App\Filament\Platform\Clusters\Operations\Resources\Notifications\Tables\NotificationTable;
 use App\Models\Notification;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class NotificationResource extends Resource
@@ -43,99 +39,26 @@ class NotificationResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextInput::make('tenant_id')
-                    ->numeric(),
-                TextInput::make('type')
-                    ->required(),
-                TextInput::make('notifiable_type')
-                    ->required(),
-                TextInput::make('notifiable_id')
-                    ->required()
-                    ->numeric(),
-                Textarea::make('data')
-                    ->required()
-                    ->columnSpanFull(),
-                DateTimePicker::make('read_at'),
-            ]);
+        return NotificationForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('id')
-                    ->label('编号'),
-                TextEntry::make('tenant_id')
-                    ->numeric()
-                    ->placeholder('-'),
-                TextEntry::make('type'),
-                TextEntry::make('notifiable_type'),
-                TextEntry::make('notifiable_id')
-                    ->numeric(),
-                TextEntry::make('data')
-                    ->columnSpanFull(),
-                TextEntry::make('read_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-            ]);
+        return NotificationInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('type')
-            ->columns([
-                TextColumn::make('id')
-                    ->label('编号'),
-                TextColumn::make('tenant_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('type')
-                    ->searchable(),
-                TextColumn::make('notifiable_type')
-                    ->searchable(),
-                TextColumn::make('notifiable_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('read_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+        return NotificationTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageNotifications::route('/'),
+            'index' => ListNotifications::route('/'),
+            'create' => CreateNotification::route('/create'),
+            'view' => ViewNotification::route('/{record}'),
+            'edit' => EditNotification::route('/{record}/edit'),
         ];
     }
 }

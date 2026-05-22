@@ -2,24 +2,20 @@
 
 namespace App\Filament\Clusters\SystemSettings\Resources\Imports;
 
-use App\Filament\Clusters\SystemSettings\Resources\Imports\Pages\ManageImports;
+use App\Filament\Clusters\SystemSettings\Resources\Imports\Pages\CreateImport;
+use App\Filament\Clusters\SystemSettings\Resources\Imports\Pages\EditImport;
+use App\Filament\Clusters\SystemSettings\Resources\Imports\Pages\ListImports;
+use App\Filament\Clusters\SystemSettings\Resources\Imports\Pages\ViewImport;
+use App\Filament\Clusters\SystemSettings\Resources\Imports\Schemas\ImportForm;
+use App\Filament\Clusters\SystemSettings\Resources\Imports\Schemas\ImportInfolist;
+use App\Filament\Clusters\SystemSettings\Resources\Imports\Tables\ImportTable;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Import;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class ImportResource extends Resource
@@ -53,106 +49,26 @@ class ImportResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                DateTimePicker::make('completed_at'),
-                TextInput::make('file_name')
-                    ->required(),
-                TextInput::make('file_path')
-                    ->required(),
-                TextInput::make('importer')
-                    ->required(),
-                TextInput::make('processed_rows')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('total_rows')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('successful_rows')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                Select::make('user_id')
-                    ->relationship('user', 'name')
-                    ->required(),
-            ]);
+        return ImportForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('completed_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('file_name'),
-                TextEntry::make('file_path'),
-                TextEntry::make('importer'),
-                TextEntry::make('processed_rows')
-                    ->numeric(),
-                TextEntry::make('total_rows')
-                    ->numeric(),
-                TextEntry::make('successful_rows')
-                    ->numeric(),
-                TextEntry::make('user.name'),
-            ]);
+        return ImportInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('file_name')
-            ->columns([
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('completed_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('file_name')
-                    ->searchable(),
-                TextColumn::make('file_path')
-                    ->searchable(),
-                TextColumn::make('importer')
-                    ->searchable(),
-                TextColumn::make('processed_rows')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('total_rows')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('successful_rows')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('user.name')
-                    ->searchable(),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                ViewAction::make(),
-            ])
-            ->toolbarActions([]);
+        return ImportTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageImports::route('/'),
+            'index' => ListImports::route('/'),
+            'create' => CreateImport::route('/create'),
+            'view' => ViewImport::route('/{record}'),
+            'edit' => EditImport::route('/{record}/edit'),
         ];
     }
 }

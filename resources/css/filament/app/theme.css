@@ -271,102 +271,6 @@
     padding: 1.5rem 1rem;
 }
 
-.crm-profile-page {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-}
-
-.crm-profile-hero {
-    background: #ffffff;
-    border: 1px solid var(--gray-200);
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1.25rem;
-}
-
-.dark .crm-profile-hero {
-    background: var(--gray-900);
-    border-color: rgb(255 255 255 / 0.1);
-}
-
-.crm-profile-heading {
-    align-items: flex-start;
-    display: flex;
-    gap: 1rem;
-    justify-content: space-between;
-}
-
-.crm-profile-kicker {
-    color: var(--gray-500);
-    font-size: 0.8rem;
-    line-height: 1.1rem;
-}
-
-.crm-profile-title {
-    color: var(--gray-950);
-    font-size: 1.5rem;
-    font-weight: 650;
-    line-height: 2rem;
-}
-
-.dark .crm-profile-title {
-    color: #ffffff;
-}
-
-.crm-profile-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.crm-profile-tags span {
-    background: var(--gray-100);
-    border-radius: 999px;
-    color: var(--gray-700);
-    font-size: 0.75rem;
-    line-height: 1rem;
-    padding: 0.35rem 0.65rem;
-}
-
-.dark .crm-profile-tags span {
-    background: rgb(255 255 255 / 0.08);
-    color: var(--gray-200);
-}
-
-.crm-profile-facts {
-    display: grid;
-    gap: 0.75rem;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-
-.crm-profile-facts div {
-    color: var(--gray-800);
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-}
-
-.dark .crm-profile-facts div {
-    color: var(--gray-200);
-}
-
-.crm-profile-facts span {
-    color: var(--gray-500);
-    display: block;
-    font-size: 0.75rem;
-    line-height: 1rem;
-    margin-bottom: 0.2rem;
-}
-
-.crm-profile-grid {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-
 .crm-tab-bar,
 .crm-calendar-toolbar,
 .crm-calendar-switcher {
@@ -662,10 +566,6 @@
         grid-template-columns: minmax(0, 1fr) 10rem 8.75rem;
     }
 
-    .crm-profile-facts {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .crm-calendar-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -674,16 +574,6 @@
 @media (min-width: 1280px) {
     .crm-metric-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .crm-profile-facts,
-    .crm-profile-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .crm-profile-grid > .crm-record-panel:nth-child(1),
-    .crm-profile-grid > .crm-record-panel:nth-child(5) {
-        grid-column: span 2 / span 2;
     }
 
     .crm-calendar-grid {

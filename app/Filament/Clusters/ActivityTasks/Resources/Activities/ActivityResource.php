@@ -3,28 +3,19 @@
 namespace App\Filament\Clusters\ActivityTasks\Resources\Activities;
 
 use App\Filament\Clusters\ActivityTasks\ActivityTasksCluster;
-use App\Filament\Clusters\ActivityTasks\Resources\Activities\Pages\ManageActivities;
+use App\Filament\Clusters\ActivityTasks\Resources\Activities\Pages\CreateActivity;
+use App\Filament\Clusters\ActivityTasks\Resources\Activities\Pages\EditActivity;
+use App\Filament\Clusters\ActivityTasks\Resources\Activities\Pages\ListActivities;
+use App\Filament\Clusters\ActivityTasks\Resources\Activities\Pages\ViewActivity;
+use App\Filament\Clusters\ActivityTasks\Resources\Activities\Schemas\ActivityForm;
+use App\Filament\Clusters\ActivityTasks\Resources\Activities\Schemas\ActivityInfolist;
+use App\Filament\Clusters\ActivityTasks\Resources\Activities\Tables\ActivityTable;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Activity;
-use App\Support\Filament\CrmUi;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -53,143 +44,26 @@ class ActivityResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                Select::make('lead_id')
-                    ->relationship('lead', 'company_name'),
-                Select::make('customer_id')
-                    ->relationship('customer', 'name'),
-                Select::make('contact_id')
-                    ->relationship('contact', 'name'),
-                Select::make('opportunity_id')
-                    ->relationship('opportunity', 'name'),
-                Select::make('type')
-                    ->options(CrmUi::options('activity.type'))
-                    ->required()
-                    ->default('note'),
-                Select::make('direction')
-                    ->options(CrmUi::options('activity.direction')),
-                TextInput::make('subject'),
-                Textarea::make('content')
-                    ->columnSpanFull(),
-                TextInput::make('outcome'),
-                DateTimePicker::make('occurred_at')
-                    ->required(),
-                DateTimePicker::make('next_follow_at'),
-                Select::make('owner_user_id')
-                    ->relationship('owner', 'name')
-                    ->default(fn (): ?int => auth()->id())
-                    ->required(),
-            ]);
+        return ActivityForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextEntry::make('created_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('updated_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('deleted_at')
-                    ->dateTime()
-                    ->visible(fn (Activity $record): bool => $record->trashed()),
-                TextEntry::make('lead.company_name')
-                    ->label('线索')
-                    ->placeholder('-'),
-                TextEntry::make('customer.name')
-                    ->label('客户')
-                    ->placeholder('-'),
-                TextEntry::make('contact.name')
-                    ->label('联系人')
-                    ->placeholder('-'),
-                TextEntry::make('opportunity.name')
-                    ->label('商机')
-                    ->placeholder('-'),
-                TextEntry::make('type'),
-                TextEntry::make('direction')
-                    ->placeholder('-'),
-                TextEntry::make('subject')
-                    ->placeholder('-'),
-                TextEntry::make('content')
-                    ->placeholder('-')
-                    ->columnSpanFull(),
-                TextEntry::make('outcome')
-                    ->placeholder('-'),
-                TextEntry::make('occurred_at')
-                    ->dateTime(),
-                TextEntry::make('next_follow_at')
-                    ->dateTime()
-                    ->placeholder('-'),
-                TextEntry::make('owner.name'),
-            ]);
+        return ActivityInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('subject')
-            ->columns([
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('lead.company_name')
-                    ->searchable(),
-                TextColumn::make('customer.name')
-                    ->searchable(),
-                TextColumn::make('contact.name')
-                    ->searchable(),
-                TextColumn::make('opportunity.name')
-                    ->searchable(),
-                TextColumn::make('type')
-                    ->searchable(),
-                TextColumn::make('direction')
-                    ->searchable(),
-                TextColumn::make('subject')
-                    ->searchable(),
-                TextColumn::make('outcome')
-                    ->searchable(),
-                TextColumn::make('occurred_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('next_follow_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('owner.name')
-                    ->searchable(),
-            ])
-            ->filters([
-                TrashedFilter::make(),
-            ])
-            ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
-                RestoreAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
-                ]),
-            ]);
+        return ActivityTable::configure($table);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageActivities::route('/'),
+            'index' => ListActivities::route('/'),
+            'create' => CreateActivity::route('/create'),
+            'view' => ViewActivity::route('/{record}'),
+            'edit' => EditActivity::route('/{record}/edit'),
         ];
     }
 
