@@ -1,0 +1,174 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*.php';
+@source '../../../../resources/views/**/*.blade.php';
+@source '../../../../vendor/filament/**/*.blade.php';
+
+.crm-metric-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.crm-metric-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.crm-metric-title {
+    color: var(--gray-950);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.75rem;
+}
+
+.dark .crm-metric-title {
+    color: #ffffff;
+}
+
+.crm-metric-description {
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+.dark .crm-metric-description {
+    color: var(--gray-400);
+}
+
+.crm-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.crm-metric-card,
+.crm-record-panel {
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    background: #ffffff;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.dark .crm-metric-card,
+.dark .crm-record-panel {
+    border-color: rgb(255 255 255 / 0.1);
+    background: var(--gray-900);
+}
+
+.crm-metric-card {
+    padding: 1rem;
+}
+
+.crm-metric-label {
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+.dark .crm-metric-label {
+    color: var(--gray-400);
+}
+
+.crm-metric-value {
+    margin-top: 0.5rem;
+    color: var(--gray-950);
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 2rem;
+}
+
+.dark .crm-metric-value {
+    color: #ffffff;
+}
+
+.crm-record-panel {
+    overflow: hidden;
+}
+
+.crm-record-panel-title {
+    border-bottom: 1px solid var(--gray-200);
+    color: var(--gray-950);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    padding: 0.75rem 1rem;
+}
+
+.dark .crm-record-panel-title {
+    border-color: rgb(255 255 255 / 0.1);
+    color: #ffffff;
+}
+
+.crm-record-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.crm-record-row {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+}
+
+.crm-record-row + .crm-record-row {
+    border-top: 1px solid var(--gray-100);
+}
+
+.dark .crm-record-row + .crm-record-row {
+    border-color: rgb(255 255 255 / 0.1);
+}
+
+.crm-record-name {
+    color: var(--gray-950);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+}
+
+.dark .crm-record-name {
+    color: #ffffff;
+}
+
+.crm-record-meta,
+.crm-record-empty {
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+.dark .crm-record-meta,
+.dark .crm-record-empty {
+    color: var(--gray-400);
+}
+
+.crm-record-value {
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+.dark .crm-record-value {
+    color: var(--gray-300);
+}
+
+.crm-record-empty {
+    padding: 1.5rem 1rem;
+}
+
+@media (min-width: 640px) {
+    .crm-metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .crm-record-row {
+        grid-template-columns: minmax(0, 1fr) 10rem 8.75rem;
+    }
+}
+
+@media (min-width: 1280px) {
+    .crm-metric-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
