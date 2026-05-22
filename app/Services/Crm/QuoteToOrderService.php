@@ -4,15 +4,22 @@ namespace App\Services\Crm;
 
 use App\Models\Order;
 use App\Models\Quote;
+use App\Models\QuoteApprovalRequest;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class QuoteToOrderService
 {
     public function convert(Quote $quote): Order
     {
+        app(QuoteCalculatorService::class)->recalculate($quote);
+        $quote->refresh();
+
+        $this->ensureApprovalSatisfied($quote);
+
         return DB::transaction(function () use ($quote): Order {
-            app(QuoteCalculatorService::class)->recalculate($quote);
             $quote->refresh()->load('items');
 
             $order = Order::create([
@@ -65,6 +72,71 @@ class QuoteToOrderService
 
             return $order;
         });
+    }
+
+    private function ensureApprovalSatisfied(Quote $quote): void
+    {
+        $reasons = $this->approvalReasons($quote);
+
+        if ($reasons === [] || $quote->status === 'approved') {
+            return;
+        }
+
+        $approval = $quote->approvals()
+            ->where('status', 'pending')
+            ->latest('requested_at')
+            ->first();
+
+        if (! $approval) {
+            QuoteApprovalRequest::create([
+                'tenant_id' => $quote->tenant_id,
+                'quote_id' => $quote->id,
+                'requested_by' => Auth::id() ?: $quote->user_id,
+                'approver_id' => $this->approvalRules($quote->tenant_id)['approver_id'] ?? null,
+                'status' => 'pending',
+                'reason' => implode('；', $reasons),
+                'requested_at' => now(),
+            ]);
+        }
+
+        $quote->forceFill(['status' => 'pending_approval'])->save();
+
+        throw ValidationException::withMessages([
+            'quote_id' => '该报价触发审批规则：'.implode('；', $reasons).'。审批通过后才能转订单。',
+        ]);
+    }
+
+    private function approvalReasons(Quote $quote): array
+    {
+        $rules = $this->approvalRules($quote->tenant_id);
+        $reasons = [];
+
+        if (array_key_exists('min_profit_margin', $rules) && $rules['min_profit_margin'] !== null && $quote->profit_margin < (float) $rules['min_profit_margin']) {
+            $reasons[] = '毛利率 '.$quote->profit_margin.'% 低于 '.(float) $rules['min_profit_margin'].'%';
+        }
+
+        $subtotal = (float) $quote->subtotal_amount;
+        $discountRate = $subtotal > 0 ? round((float) $quote->discount_amount / $subtotal * 100, 2) : 0;
+
+        if (array_key_exists('max_discount_rate', $rules) && $rules['max_discount_rate'] !== null && $discountRate > (float) $rules['max_discount_rate']) {
+            $reasons[] = '折扣率 '.$discountRate.'% 高于 '.(float) $rules['max_discount_rate'].'%';
+        }
+
+        if (array_key_exists('max_amount_without_approval', $rules) && $rules['max_amount_without_approval'] !== null && $quote->total_amount > (float) $rules['max_amount_without_approval']) {
+            $reasons[] = '报价金额超过免审上限 '.number_format((float) $rules['max_amount_without_approval'], 2);
+        }
+
+        return $reasons;
+    }
+
+    private function approvalRules(int $tenantId): array
+    {
+        $setting = Setting::query()
+            ->where('tenant_id', $tenantId)
+            ->where('key', 'quote_approval_rules')
+            ->first();
+
+        return is_array($setting?->value) ? $setting->value : [];
     }
 
     private function nextOrderNumber(int $tenantId): string

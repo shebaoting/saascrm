@@ -16,6 +16,7 @@ class Opportunity extends TenantModel
         'expected_close_date' => 'date',
         'closed_at' => 'datetime',
         'ended_at' => 'datetime',
+        'custom_fields' => 'array',
     ];
 
     public function customer(): BelongsTo

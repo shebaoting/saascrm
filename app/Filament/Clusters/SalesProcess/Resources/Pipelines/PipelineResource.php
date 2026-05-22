@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SalesProcess\Resources\Pipelines;
 
 use App\Filament\Clusters\SalesProcess\Resources\Pipelines\Pages\ManagePipelines;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Pipeline;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -31,6 +32,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class PipelineResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Pipeline::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -44,6 +47,8 @@ class PipelineResource extends Resource
     protected static ?string $title = '销售管道';
 
     protected static bool $hasTitleCaseModelLabel = false;
+
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $cluster = SalesProcessCluster::class;
 

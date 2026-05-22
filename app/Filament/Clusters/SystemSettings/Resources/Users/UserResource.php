@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\Users;
 
 use App\Filament\Clusters\SystemSettings\Resources\Users\Pages\ManageUsers;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\User;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
@@ -29,6 +30,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class UserResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = User::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

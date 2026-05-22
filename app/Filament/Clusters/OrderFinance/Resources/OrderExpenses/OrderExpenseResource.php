@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\OrderFinance\Resources\OrderExpenses;
 
 use App\Filament\Clusters\OrderFinance\OrderFinanceCluster;
 use App\Filament\Clusters\OrderFinance\Resources\OrderExpenses\Pages\ManageOrderExpenses;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\OrderExpense;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
@@ -32,6 +33,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class OrderExpenseResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = OrderExpense::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

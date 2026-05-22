@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\AutomationActions;
 
 use App\Filament\Clusters\SystemSettings\Resources\AutomationActions\Pages\ManageAutomationActions;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\AutomationAction;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
@@ -13,6 +14,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -23,6 +25,8 @@ use Filament\Tables\Table;
 
 class AutomationActionResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = AutomationAction::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -53,7 +57,13 @@ class AutomationActionResource extends Resource
                 Select::make('action_type')
                     ->options(CrmUi::options('automation.action_type'))
                     ->required(),
-                TextInput::make('payload'),
+                Textarea::make('payload')
+                    ->formatStateUsing(fn ($state): ?string => is_array($state) ? json_encode($state, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : $state)
+                    ->dehydrateStateUsing(function (?string $state): ?array {
+                        $decoded = blank($state) ? null : json_decode($state, true);
+
+                        return is_array($decoded) ? $decoded : null;
+                    }),
                 TextInput::make('sort_order')
                     ->required()
                     ->numeric()

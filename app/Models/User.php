@@ -54,6 +54,13 @@ class User extends Authenticatable implements FilamentUser, HasName, HasTenants
             ->withPivot(['tenant_id', 'model_type']);
     }
 
+    public function departments(): BelongsToMany
+    {
+        return $this->belongsToMany(Department::class, 'department_user')
+            ->withPivot(['tenant_id', 'is_leader', 'main_department'])
+            ->withTimestamps();
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         if (! $this->status) {

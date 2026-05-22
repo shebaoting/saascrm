@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\Imports;
 
 use App\Filament\Clusters\SystemSettings\Resources\Imports\Pages\ManageImports;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Import;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -23,6 +24,8 @@ use Filament\Tables\Table;
 
 class ImportResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Import::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

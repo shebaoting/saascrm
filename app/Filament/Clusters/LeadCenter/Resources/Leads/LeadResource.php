@@ -3,10 +3,14 @@
 namespace App\Filament\Clusters\LeadCenter\Resources\Leads;
 
 use App\Filament\Clusters\LeadCenter\LeadCenterCluster;
+use App\Filament\Clusters\LeadCenter\Resources\Leads\Pages\LeadProfile;
 use App\Filament\Clusters\LeadCenter\Resources\Leads\Pages\ManageLeads;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Lead;
 use App\Services\Crm\LeadAssignmentService;
 use App\Services\Crm\LeadConversionService;
+use App\Support\CrmAccess;
+use App\Support\Filament\CustomFieldUi;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -20,7 +24,9 @@ use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\TextEntry;
@@ -29,6 +35,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -36,6 +43,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class LeadResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Lead::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -70,7 +79,7 @@ class LeadResource extends Resource
                 TextInput::make('area_id'),
                 TextInput::make('address'),
                 TextInput::make('source'),
-                TextInput::make('tags'),
+                TagsInput::make('tags'),
                 Select::make('status')
                     ->options(CrmUi::options('lead.status'))
                     ->required()
@@ -92,7 +101,7 @@ class LeadResource extends Resource
                 Select::make('converted_by')
                     ->relationship('convertedBy', 'name'),
                 TextInput::make('lost_reason'),
-                TextInput::make('custom_fields'),
+                ...CustomFieldUi::formSections('lead'),
             ]);
     }
 
@@ -154,6 +163,7 @@ class LeadResource extends Resource
                     ->placeholder('-'),
                 TextEntry::make('lost_reason')
                     ->placeholder('-'),
+                ...CustomFieldUi::infolistSections('lead'),
             ]);
     }
 
@@ -220,15 +230,27 @@ class LeadResource extends Resource
                     ->searchable(),
                 TextColumn::make('lost_reason')
                     ->searchable(),
+                ...CustomFieldUi::tableColumns('lead'),
             ])
             ->filters([
+                SelectFilter::make('status')
+                    ->options(CrmUi::options('lead.status')),
+                SelectFilter::make('qualification_status')
+                    ->options(CrmUi::options('lead.qualification_status')),
+                SelectFilter::make('owner_user_id')
+                    ->relationship('owner', 'name'),
                 TrashedFilter::make(),
+                ...CustomFieldUi::tableFilters('lead'),
             ])
             ->recordActions([
+                Action::make('profile')
+                    ->label('线索详情')
+                    ->icon('heroicon-o-identification')
+                    ->url(fn (Lead $record): string => static::getUrl('profile', ['record' => $record])),
                 Action::make('claim')
                     ->label('领取')
                     ->icon('heroicon-o-hand-raised')
-                    ->visible(fn (Lead $record): bool => blank($record->owner_user_id) || in_array($record->status, ['unassigned', 'pooled'], true))
+                    ->visible(fn (Lead $record): bool => CrmAccess::hasPermission('lead.claim') && (blank($record->owner_user_id) || in_array($record->status, ['unassigned', 'pooled'], true)))
                     ->action(function (Lead $record): void {
                         app(LeadAssignmentService::class)->claim($record, auth()->user());
 
@@ -237,7 +259,7 @@ class LeadResource extends Resource
                 Action::make('convert')
                     ->label('转客户')
                     ->icon('heroicon-o-arrow-path-rounded-square')
-                    ->visible(fn (Lead $record): bool => $record->status !== 'converted')
+                    ->visible(fn (Lead $record): bool => CrmAccess::hasPermission('lead.convert') && $record->status !== 'converted')
                     ->form([
                         Toggle::make('create_opportunity')
                             ->label('同时创建商机')
@@ -259,6 +281,7 @@ class LeadResource extends Resource
                     ->label('释放到公海')
                     ->icon('heroicon-o-archive-box-arrow-down')
                     ->color('gray')
+                    ->visible(fn (): bool => CrmAccess::hasPermission('lead.update'))
                     ->requiresConfirmation()
                     ->action(function (Lead $record): void {
                         app(LeadAssignmentService::class)->release($record, '手动释放');
@@ -284,6 +307,7 @@ class LeadResource extends Resource
     {
         return [
             'index' => ManageLeads::route('/'),
+            'profile' => LeadProfile::route('/{record}/profile'),
         ];
     }
 

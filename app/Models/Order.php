@@ -56,6 +56,11 @@ class Order extends TenantModel
         return $this->hasMany(Payment::class);
     }
 
+    public function paymentPlans(): HasMany
+    {
+        return $this->hasMany(OrderPaymentPlan::class);
+    }
+
     public function expenses(): HasMany
     {
         return $this->hasMany(OrderExpense::class);

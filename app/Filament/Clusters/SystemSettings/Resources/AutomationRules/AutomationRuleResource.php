@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\AutomationRules;
 
 use App\Filament\Clusters\SystemSettings\Resources\AutomationRules\Pages\ManageAutomationRules;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\AutomationRule;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
@@ -14,6 +15,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
@@ -27,6 +29,8 @@ use Filament\Tables\Table;
 
 class AutomationRuleResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = AutomationRule::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -40,6 +44,8 @@ class AutomationRuleResource extends Resource
     protected static ?string $title = '自动化规则';
 
     protected static bool $hasTitleCaseModelLabel = false;
+
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $cluster = SystemSettingsCluster::class;
 
@@ -57,7 +63,13 @@ class AutomationRuleResource extends Resource
                 Select::make('target_type')
                     ->options(CrmUi::options('target_type'))
                     ->required(),
-                TextInput::make('conditions'),
+                Textarea::make('conditions')
+                    ->formatStateUsing(fn ($state): ?string => is_array($state) ? json_encode($state, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : $state)
+                    ->dehydrateStateUsing(function (?string $state): ?array {
+                        $decoded = blank($state) ? null : json_decode($state, true);
+
+                        return is_array($decoded) ? $decoded : null;
+                    }),
                 Toggle::make('is_active')
                     ->required(),
                 DateTimePicker::make('last_run_at'),

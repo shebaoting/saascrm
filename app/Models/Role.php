@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Role extends TenantModel
 {
+    protected $casts = [
+        'custom_department_ids' => 'array',
+        'custom_user_ids' => 'array',
+    ];
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);

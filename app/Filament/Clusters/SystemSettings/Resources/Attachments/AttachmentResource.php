@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\Attachments;
 
 use App\Filament\Clusters\SystemSettings\Resources\Attachments\Pages\ManageAttachments;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Attachment;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -15,6 +16,8 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Facades\Filament;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
@@ -29,6 +32,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class AttachmentResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Attachment::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -53,7 +58,11 @@ class AttachmentResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('path')
+                FileUpload::make('path')
+                    ->disk('local')
+                    ->directory(fn (): string => 'tenants/'.Filament::getTenant()->getKey().'/attachments')
+                    ->downloadable()
+                    ->openable()
                     ->required(),
                 TextInput::make('disk')
                     ->required()

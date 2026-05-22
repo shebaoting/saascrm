@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolRules;
 
 use App\Filament\Clusters\CustomerCenter\CustomerCenterCluster;
 use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolRules\Pages\ManageCustomerPoolRules;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\CustomerPoolRule;
 use App\Models\Department;
 use App\Support\Filament\CrmUi;
@@ -27,6 +28,8 @@ use Filament\Tables\Table;
 
 class CustomerPoolRuleResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = CustomerPoolRule::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -40,6 +43,8 @@ class CustomerPoolRuleResource extends Resource
     protected static ?string $title = '公海规则';
 
     protected static bool $hasTitleCaseModelLabel = false;
+
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $cluster = CustomerCenterCluster::class;
 

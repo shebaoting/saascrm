@@ -4,7 +4,9 @@ namespace App\Filament\Clusters\SalesProcess\Resources\PipelineStages;
 
 use App\Filament\Clusters\SalesProcess\Resources\PipelineStages\Pages\ManagePipelineStages;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\PipelineStage;
+use App\Support\Filament\CustomFieldUi;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -12,6 +14,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -26,6 +29,8 @@ use Filament\Tables\Table;
 
 class PipelineStageResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = PipelineStage::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -39,6 +44,8 @@ class PipelineStageResource extends Resource
     protected static ?string $title = '销售阶段';
 
     protected static bool $hasTitleCaseModelLabel = false;
+
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $cluster = SalesProcessCluster::class;
 
@@ -61,7 +68,11 @@ class PipelineStageResource extends Resource
                     ->options(CrmUi::options('pipeline.stage_type'))
                     ->required()
                     ->default('open'),
-                TextInput::make('required_fields'),
+                CheckboxList::make('required_fields')
+                    ->options(fn (): array => CustomFieldUi::requiredFieldOptions('opportunity'))
+                    ->columns(2)
+                    ->bulkToggleable()
+                    ->columnSpanFull(),
                 TextInput::make('sort_order')
                     ->required()
                     ->numeric()

@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\Settings;
 
 use App\Filament\Clusters\SystemSettings\Resources\Settings\Pages\ManageSettings;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Setting;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -21,6 +22,8 @@ use Filament\Tables\Table;
 
 class SettingResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Setting::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

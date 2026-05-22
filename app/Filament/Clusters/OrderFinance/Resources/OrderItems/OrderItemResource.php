@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\OrderFinance\Resources\OrderItems;
 
 use App\Filament\Clusters\OrderFinance\OrderFinanceCluster;
 use App\Filament\Clusters\OrderFinance\Resources\OrderItems\Pages\ManageOrderItems;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\OrderItem;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -11,6 +12,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
@@ -22,6 +24,8 @@ use Filament\Tables\Table;
 
 class OrderItemResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = OrderItem::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -57,7 +61,8 @@ class OrderItemResource extends Resource
                 TextInput::make('product_name')
                     ->required(),
                 TextInput::make('sku_code'),
-                TextInput::make('specifications'),
+                KeyValue::make('specifications')
+                    ->columnSpanFull(),
                 TextInput::make('quantity')
                     ->required()
                     ->numeric()

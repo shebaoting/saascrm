@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\CustomerCenter\Resources\CustomerTransferHistori
 
 use App\Filament\Clusters\CustomerCenter\CustomerCenterCluster;
 use App\Filament\Clusters\CustomerCenter\Resources\CustomerTransferHistories\Pages\ManageCustomerTransferHistories;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\CustomerTransferHistory;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
@@ -23,6 +24,8 @@ use Filament\Tables\Table;
 
 class CustomerTransferHistoryResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = CustomerTransferHistory::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

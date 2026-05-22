@@ -4,8 +4,12 @@ namespace App\Filament\Clusters\OrderFinance\Resources\Orders;
 
 use App\Filament\Clusters\OrderFinance\OrderFinanceCluster;
 use App\Filament\Clusters\OrderFinance\Resources\Orders\Pages\ManageOrders;
+use App\Filament\Concerns\UsesCrmAccess;
+use App\Models\Contact;
 use App\Models\Order;
 use App\Services\Crm\OrderFinanceService;
+use App\Support\CrmAccess;
+use App\Support\Filament\CustomFieldUi;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -18,16 +22,22 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -35,6 +45,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class OrderResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Order::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -62,9 +74,15 @@ class OrderResource extends Resource
                     ->required(),
                 Select::make('customer_id')
                     ->relationship('customer', 'name')
+                    ->live()
                     ->required(),
                 Select::make('contact_id')
-                    ->relationship('contact', 'name'),
+                    ->options(fn (Get $get): array => Contact::query()
+                        ->where('tenant_id', CrmAccess::tenantId())
+                        ->when($get('customer_id'), fn (Builder $query, int|string $customerId): Builder => $query->where('customer_id', $customerId))
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all()),
                 Select::make('opportunity_id')
                     ->relationship('opportunity', 'name'),
                 Select::make('quote_id')
@@ -72,6 +90,36 @@ class OrderResource extends Resource
                 Select::make('employee_id')
                     ->relationship('employee', 'name')
                     ->default(fn (): ?int => auth()->id()),
+                Repeater::make('items')
+                    ->label('订单明细')
+                    ->relationship('items')
+                    ->schema([
+                        Select::make('product_id')
+                            ->relationship('product', 'name')
+                            ->required(),
+                        Select::make('product_sku_id')
+                            ->relationship('sku', 'sku_code'),
+                        TextInput::make('quantity')
+                            ->required()
+                            ->numeric()
+                            ->default(1),
+                        TextInput::make('unit_price')
+                            ->required()
+                            ->numeric()
+                            ->default(0)
+                            ->prefix('¥'),
+                        TextInput::make('cost_price')
+                            ->numeric()
+                            ->default(0)
+                            ->prefix('¥'),
+                        TextInput::make('tax_rate')
+                            ->numeric()
+                            ->default(0)
+                            ->suffix('%'),
+                    ])
+                    ->columns(3)
+                    ->columnSpanFull()
+                    ->addActionLabel('添加订单明细'),
                 TextInput::make('subtotal_amount')
                     ->required()
                     ->numeric()
@@ -88,7 +136,7 @@ class OrderResource extends Resource
                     ->required()
                     ->numeric()
                     ->default(0)
-                    ->prefix('$'),
+                    ->prefix('¥'),
                 TextInput::make('gross_profit')
                     ->required()
                     ->numeric()
@@ -105,12 +153,32 @@ class OrderResource extends Resource
                     ->options(CrmUi::options('payment_status'))
                     ->required()
                     ->default('unpaid'),
+                Repeater::make('paymentPlans')
+                    ->label('收款计划')
+                    ->relationship('paymentPlans')
+                    ->schema([
+                        DatePicker::make('plan_date')
+                            ->required(),
+                        TextInput::make('plan_amount')
+                            ->required()
+                            ->numeric()
+                            ->default(0)
+                            ->prefix('¥'),
+                        Select::make('status')
+                            ->options(CrmUi::options('payment_plan.status'))
+                            ->default('pending')
+                            ->required(),
+                        TextInput::make('notes'),
+                    ])
+                    ->columns(4)
+                    ->columnSpanFull()
+                    ->addActionLabel('添加收款计划'),
                 DateTimePicker::make('ordered_at')
                     ->required(),
                 DateTimePicker::make('completed_at'),
                 Textarea::make('notes')
                     ->columnSpanFull(),
-                TextInput::make('custom_fields'),
+                ...CustomFieldUi::formSections('order'),
             ]);
     }
 
@@ -154,6 +222,21 @@ class OrderResource extends Resource
                 TextEntry::make('order_source'),
                 TextEntry::make('order_status'),
                 TextEntry::make('payment_status'),
+                RepeatableEntry::make('paymentPlans')
+                    ->label('收款计划')
+                    ->schema([
+                        TextEntry::make('plan_date')
+                            ->date(),
+                        TextEntry::make('plan_amount')
+                            ->money(),
+                        TextEntry::make('received_amount')
+                            ->money(),
+                        TextEntry::make('status'),
+                        TextEntry::make('notes')
+                            ->placeholder('-'),
+                    ])
+                    ->columns(5)
+                    ->columnSpanFull(),
                 TextEntry::make('ordered_at')
                     ->dateTime(),
                 TextEntry::make('completed_at')
@@ -162,6 +245,7 @@ class OrderResource extends Resource
                 TextEntry::make('notes')
                     ->placeholder('-')
                     ->columnSpanFull(),
+                ...CustomFieldUi::infolistSections('order'),
             ]);
     }
 
@@ -221,9 +305,17 @@ class OrderResource extends Resource
                 TextColumn::make('completed_at')
                     ->dateTime()
                     ->sortable(),
+                ...CustomFieldUi::tableColumns('order'),
             ])
             ->filters([
+                SelectFilter::make('order_status')
+                    ->options(CrmUi::options('order.order_status')),
+                SelectFilter::make('payment_status')
+                    ->options(CrmUi::options('payment_status')),
+                SelectFilter::make('customer_id')
+                    ->relationship('customer', 'name'),
                 TrashedFilter::make(),
+                ...CustomFieldUi::tableFilters('order'),
             ])
             ->recordActions([
                 Action::make('refresh_finance')

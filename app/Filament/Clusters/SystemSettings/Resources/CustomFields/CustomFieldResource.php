@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\CustomFields;
 
 use App\Filament\Clusters\SystemSettings\Resources\CustomFields\Pages\ManageCustomFields;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\CustomField;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
@@ -12,6 +13,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -26,6 +28,8 @@ use Filament\Tables\Table;
 
 class CustomFieldResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = CustomField::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -71,7 +75,8 @@ class CustomFieldResource extends Resource
                     ->required(),
                 Toggle::make('is_show_in_tracking')
                     ->required(),
-                TextInput::make('data'),
+                KeyValue::make('data')
+                    ->columnSpanFull(),
             ]);
     }
 

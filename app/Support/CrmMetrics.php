@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\AssignmentRule;
 use App\Models\AuditLog;
 use App\Models\Customer;
+use App\Models\Department;
 use App\Models\Export;
 use App\Models\FailedImportRow;
 use App\Models\Import;
@@ -21,6 +22,8 @@ use App\Models\Quote;
 use App\Models\SalesTarget;
 use App\Models\Task;
 use App\Models\Tenant;
+use App\Models\User;
+use App\Support\Filament\CrmUi;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Auth;
 
@@ -48,7 +51,7 @@ class CrmMetrics
                 ->get(['title', 'status', 'due_at'])
                 ->map(fn (Task $task): array => [
                     'title' => $task->title,
-                    'meta' => $task->status,
+                    'meta' => self::optionLabel('task.status', $task->status),
                     'value' => $task->due_at?->format('Y-m-d H:i') ?? '-',
                 ])
                 ->all(),
@@ -73,7 +76,7 @@ class CrmMetrics
                 ->limit(6)
                 ->get()
                 ->map(fn (SalesTarget $target): array => [
-                    'title' => $target->target_type.' #'.($target->target_id ?: 'tenant'),
+                    'title' => self::salesTargetName($target),
                     'meta' => $target->period_start?->format('Y-m-d').' - '.$target->period_end?->format('Y-m-d'),
                     'value' => self::money($target->target_amount),
                 ])
@@ -101,7 +104,7 @@ class CrmMetrics
                 ->get(['title', 'priority', 'due_at'])
                 ->map(fn (Task $task): array => [
                     'title' => $task->title,
-                    'meta' => $task->priority,
+                    'meta' => self::optionLabel('task.priority', $task->priority),
                     'value' => $task->due_at?->format('m-d H:i') ?? '-',
                 ])
                 ->all(),
@@ -140,10 +143,10 @@ class CrmMetrics
 
         return [
             'heading' => '销售预测',
-            'description' => '按预测分类汇总 pipeline、best case、commit 和 closed。',
+            'description' => '按管道预测、最佳情况、承诺成交和已成交分类汇总。',
             'metrics' => collect(['pipeline', 'best_case', 'commit', 'closed'])
                 ->map(fn (string $category): array => [
-                    'label' => $category,
+                    'label' => self::optionLabel('forecast_category', $category),
                     'value' => self::money(Opportunity::where('tenant_id', $tenantId)->where('forecast_category', $category)->sum('amount')),
                 ])
                 ->all(),
@@ -153,7 +156,7 @@ class CrmMetrics
                 ->get(['name', 'forecast_category', 'amount'])
                 ->map(fn ($opportunity): array => [
                     'title' => $opportunity->name,
-                    'meta' => $opportunity->forecast_category,
+                    'meta' => self::optionLabel('forecast_category', $opportunity->forecast_category),
                     'value' => self::money($opportunity->amount),
                 ])
                 ->all(),
@@ -179,7 +182,7 @@ class CrmMetrics
                 ->get(['subject', 'type', 'occurred_at'])
                 ->map(fn (Activity $activity): array => [
                     'title' => $activity->subject ?: '未命名活动',
-                    'meta' => $activity->type,
+                    'meta' => self::optionLabel('activity.type', $activity->type),
                     'value' => $activity->occurred_at?->format('m-d H:i') ?? '-',
                 ])
                 ->all(),
@@ -205,7 +208,7 @@ class CrmMetrics
                 ->get(['order_number', 'payment_status', 'total_amount'])
                 ->map(fn (Order $order): array => [
                     'title' => $order->order_number,
-                    'meta' => $order->payment_status,
+                    'meta' => self::optionLabel('payment_status', $order->payment_status),
                     'value' => self::money($order->total_amount),
                 ])
                 ->all(),
@@ -280,7 +283,7 @@ class CrmMetrics
                 ->get(['name', 'status', 'created_at'])
                 ->map(fn (Tenant $tenant): array => [
                     'title' => $tenant->name,
-                    'meta' => $tenant->status,
+                    'meta' => self::optionLabel('tenant.status', $tenant->status),
                     'value' => $tenant->created_at?->format('Y-m-d') ?? '-',
                 ])
                 ->all(),
@@ -295,6 +298,26 @@ class CrmMetrics
     private static function money(mixed $amount): string
     {
         return '¥'.number_format((float) $amount, 2);
+    }
+
+    private static function optionLabel(string $key, mixed $value): string
+    {
+        return CrmUi::options($key)[(string) $value] ?? (string) $value;
+    }
+
+    private static function salesTargetName(SalesTarget $target): string
+    {
+        return match ($target->target_type) {
+            'tenant' => '全公司目标',
+            'department' => '部门目标：'.(Department::query()
+                ->where('tenant_id', $target->tenant_id)
+                ->whereKey($target->target_id)
+                ->value('name') ?? '#'.$target->target_id),
+            'user' => '员工目标：'.(User::query()
+                ->whereKey($target->target_id)
+                ->value('name') ?? '#'.$target->target_id),
+            default => self::optionLabel('target_type', $target->target_type).' #'.($target->target_id ?: '-'),
+        };
     }
 
     private static function openOpportunityValue(?int $tenantId): float

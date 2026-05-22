@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\Departments;
 
 use App\Filament\Clusters\SystemSettings\Resources\Departments\Pages\ManageDepartments;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Department;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -29,6 +30,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class DepartmentResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Department::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

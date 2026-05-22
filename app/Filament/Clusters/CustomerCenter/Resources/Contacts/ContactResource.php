@@ -4,7 +4,9 @@ namespace App\Filament\Clusters\CustomerCenter\Resources\Contacts;
 
 use App\Filament\Clusters\CustomerCenter\CustomerCenterCluster;
 use App\Filament\Clusters\CustomerCenter\Resources\Contacts\Pages\ManageContacts;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Contact;
+use App\Support\Filament\CustomFieldUi;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -16,6 +18,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -26,6 +29,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,6 +37,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ContactResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Contact::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -73,7 +79,7 @@ class ContactResource extends Resource
                 TextInput::make('avatar'),
                 Toggle::make('is_primary')
                     ->required(),
-                TextInput::make('custom_fields'),
+                ...CustomFieldUi::formSections('contact'),
             ]);
     }
 
@@ -110,6 +116,7 @@ class ContactResource extends Resource
                     ->placeholder('-'),
                 IconEntry::make('is_primary')
                     ->boolean(),
+                ...CustomFieldUi::infolistSections('contact'),
             ]);
     }
 
@@ -151,9 +158,15 @@ class ContactResource extends Resource
                     ->searchable(),
                 IconColumn::make('is_primary')
                     ->boolean(),
+                ...CustomFieldUi::tableColumns('contact'),
             ])
             ->filters([
+                SelectFilter::make('customer_id')
+                    ->relationship('customer', 'name'),
+                SelectFilter::make('gender')
+                    ->options(CrmUi::options('gender')),
                 TrashedFilter::make(),
+                ...CustomFieldUi::tableFilters('contact'),
             ])
             ->recordActions([
                 ViewAction::make(),

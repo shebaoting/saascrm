@@ -4,7 +4,9 @@ namespace App\Filament\Clusters\SystemSettings\Resources\CustomFieldLayouts;
 
 use App\Filament\Clusters\SystemSettings\Resources\CustomFieldLayouts\Pages\ManageCustomFieldLayouts;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\CustomFieldLayout;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -12,6 +14,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -22,6 +25,8 @@ use Filament\Tables\Table;
 
 class CustomFieldLayoutResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = CustomFieldLayout::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -36,7 +41,7 @@ class CustomFieldLayoutResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
 
     protected static ?string $cluster = SystemSettingsCluster::class;
 
@@ -46,12 +51,27 @@ class CustomFieldLayoutResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('model_type')
+                Select::make('model_type')
+                    ->options(CrmUi::options('target_type'))
                     ->required(),
                 Select::make('role_id')
                     ->relationship('role', 'name'),
-                TextInput::make('layout')
-                    ->required(),
+                Textarea::make('layout')
+                    ->rows(12)
+                    ->json()
+                    ->formatStateUsing(fn (mixed $state): string => json_encode($state ?: [
+                        'groups' => [
+                            ['name' => '基础信息', 'fields' => []],
+                            ['name' => '扩展字段', 'fields' => []],
+                        ],
+                        'hidden_fields' => [],
+                        'readonly_fields' => [],
+                        'list_columns' => [],
+                        'detail_fields' => [],
+                    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE))
+                    ->dehydrateStateUsing(fn (?string $state): array => json_decode($state ?: '{}', true) ?: [])
+                    ->required()
+                    ->columnSpanFull(),
             ]);
     }
 

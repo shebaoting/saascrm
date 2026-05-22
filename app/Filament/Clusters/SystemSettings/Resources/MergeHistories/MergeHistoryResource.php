@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\MergeHistories;
 
 use App\Filament\Clusters\SystemSettings\Resources\MergeHistories\Pages\ManageMergeHistories;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\MergeHistory;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -22,6 +23,8 @@ use Filament\Tables\Table;
 
 class MergeHistoryResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = MergeHistory::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

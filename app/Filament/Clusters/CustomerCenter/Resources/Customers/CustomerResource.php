@@ -3,10 +3,17 @@
 namespace App\Filament\Clusters\CustomerCenter\Resources\Customers;
 
 use App\Filament\Clusters\CustomerCenter\CustomerCenterCluster;
+use App\Filament\Clusters\CustomerCenter\Resources\Customers\Pages\CustomerProfile;
 use App\Filament\Clusters\CustomerCenter\Resources\Customers\Pages\ManageCustomers;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Customer;
+use App\Services\Crm\CustomerMergeService;
+use App\Services\Crm\CustomerPoolService;
+use App\Support\CrmAccess;
+use App\Support\Filament\CustomFieldUi;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -17,13 +24,18 @@ use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -31,6 +43,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class CustomerResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Customer::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -53,41 +67,48 @@ class CustomerResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->required(),
-                TextInput::make('short_name'),
-                Select::make('customer_type')
-                    ->options(CrmUi::options('customer.customer_type'))
-                    ->required()
-                    ->default('company'),
-                Select::make('lifecycle_stage')
-                    ->options(CrmUi::options('customer.lifecycle_stage'))
-                    ->required()
-                    ->default('new'),
-                Select::make('owner_user_id')
-                    ->relationship('owner', 'name'),
-                TextInput::make('source'),
-                TextInput::make('tags'),
-                TextInput::make('country_code'),
-                TextInput::make('area_id'),
-                TextInput::make('email')
-                    ->label('邮箱')
-                    ->email(),
-                TextInput::make('phone')
-                    ->tel(),
-                TextInput::make('registered_address'),
-                TextInput::make('website')
-                    ->url(),
-                TextInput::make('industry'),
-                TextInput::make('company_size'),
-                TextInput::make('annual_revenue')
-                    ->numeric(),
-                DateTimePicker::make('pool_entered_at'),
-                DateTimePicker::make('last_activity_at'),
-                DateTimePicker::make('next_activity_at'),
-                DateTimePicker::make('first_order_at'),
-                DateTimePicker::make('last_order_at'),
-                TextInput::make('custom_fields'),
+                Section::make('基础信息')
+                    ->schema([
+                        CustomFieldUi::applyLayout(TextInput::make('name')->required(), 'customer', 'name'),
+                        CustomFieldUi::applyLayout(TextInput::make('short_name'), 'customer', 'short_name'),
+                        CustomFieldUi::applyLayout(Select::make('customer_type')->options(CrmUi::options('customer.customer_type'))->required()->default('company'), 'customer', 'customer_type'),
+                        CustomFieldUi::applyLayout(Select::make('lifecycle_stage')->options(CrmUi::options('customer.lifecycle_stage'))->required()->default('new'), 'customer', 'lifecycle_stage'),
+                        CustomFieldUi::applyLayout(TextInput::make('phone')->tel(), 'customer', 'phone'),
+                        CustomFieldUi::applyLayout(TextInput::make('email')->label('邮箱')->email(), 'customer', 'email'),
+                        CustomFieldUi::applyLayout(TextInput::make('website')->url(), 'customer', 'website'),
+                        CustomFieldUi::applyLayout(TextInput::make('registered_address')->columnSpanFull(), 'customer', 'registered_address'),
+                    ])
+                    ->columns(2)
+                    ->columnSpanFull(),
+                Section::make('归属信息')
+                    ->schema([
+                        CustomFieldUi::applyLayout(Select::make('owner_user_id')->relationship('owner', 'name'), 'customer', 'owner_user_id'),
+                        CustomFieldUi::applyLayout(TextInput::make('source'), 'customer', 'source'),
+                        CustomFieldUi::applyLayout(TextInput::make('country_code'), 'customer', 'country_code'),
+                        CustomFieldUi::applyLayout(TextInput::make('area_id'), 'customer', 'area_id'),
+                        CustomFieldUi::applyLayout(TagsInput::make('tags')->columnSpanFull(), 'customer', 'tags'),
+                    ])
+                    ->columns(2)
+                    ->columnSpanFull(),
+                Section::make('跟进信息')
+                    ->schema([
+                        CustomFieldUi::applyLayout(DateTimePicker::make('pool_entered_at'), 'customer', 'pool_entered_at'),
+                        CustomFieldUi::applyLayout(DateTimePicker::make('last_activity_at'), 'customer', 'last_activity_at'),
+                        CustomFieldUi::applyLayout(DateTimePicker::make('next_activity_at'), 'customer', 'next_activity_at'),
+                    ])
+                    ->columns(3)
+                    ->columnSpanFull(),
+                Section::make('财务信息')
+                    ->schema([
+                        CustomFieldUi::applyLayout(TextInput::make('industry'), 'customer', 'industry'),
+                        CustomFieldUi::applyLayout(TextInput::make('company_size'), 'customer', 'company_size'),
+                        CustomFieldUi::applyLayout(TextInput::make('annual_revenue')->numeric(), 'customer', 'annual_revenue'),
+                        CustomFieldUi::applyLayout(DateTimePicker::make('first_order_at'), 'customer', 'first_order_at'),
+                        CustomFieldUi::applyLayout(DateTimePicker::make('last_order_at'), 'customer', 'last_order_at'),
+                    ])
+                    ->columns(3)
+                    ->columnSpanFull(),
+                ...CustomFieldUi::formSections('customer'),
             ]);
     }
 
@@ -148,6 +169,7 @@ class CustomerResource extends Resource
                 TextEntry::make('last_order_at')
                     ->dateTime()
                     ->placeholder('-'),
+                ...CustomFieldUi::infolistSections('customer'),
             ]);
     }
 
@@ -171,38 +193,51 @@ class CustomerResource extends Resource
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('short_name')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('customer_type')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('lifecycle_stage')
                     ->searchable(),
                 TextColumn::make('owner.name')
                     ->searchable(),
                 TextColumn::make('source')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('country_code')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('area_id')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('email')
                     ->label('邮箱')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('phone')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('registered_address')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('website')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('industry')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('company_size')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('annual_revenue')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('pool_entered_at')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('last_activity_at')
                     ->dateTime()
                     ->sortable(),
@@ -211,15 +246,77 @@ class CustomerResource extends Resource
                     ->sortable(),
                 TextColumn::make('first_order_at')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('last_order_at')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                ...CustomFieldUi::tableColumns('customer'),
             ])
             ->filters([
+                SelectFilter::make('lifecycle_stage')
+                    ->options(CrmUi::options('customer.lifecycle_stage')),
+                SelectFilter::make('customer_type')
+                    ->options(CrmUi::options('customer.customer_type')),
+                SelectFilter::make('owner_user_id')
+                    ->relationship('owner', 'name'),
                 TrashedFilter::make(),
+                ...CustomFieldUi::tableFilters('customer'),
             ])
             ->recordActions([
+                Action::make('profile')
+                    ->label('客户360')
+                    ->icon('heroicon-o-identification')
+                    ->url(fn (Customer $record): string => static::getUrl('profile', ['record' => $record])),
+                Action::make('claim')
+                    ->label('领取')
+                    ->icon('heroicon-o-hand-raised')
+                    ->visible(fn (Customer $record): bool => CrmAccess::hasPermission('customer.claim') && (blank($record->owner_user_id) || $record->lifecycle_stage === 'pooled'))
+                    ->action(function (Customer $record): void {
+                        app(CustomerPoolService::class)->claimCustomer($record, auth()->user());
+
+                        Notification::make()->success()->title('客户已领取')->send();
+                    }),
+                Action::make('release')
+                    ->label('释放到公海')
+                    ->icon('heroicon-o-archive-box-arrow-down')
+                    ->color('gray')
+                    ->visible(fn (Customer $record): bool => CrmAccess::hasPermission('customer.recycle') && filled($record->owner_user_id))
+                    ->form([
+                        TextInput::make('reason')
+                            ->label('释放原因')
+                            ->maxLength(255),
+                    ])
+                    ->action(function (Customer $record, array $data): void {
+                        app(CustomerPoolService::class)->releaseCustomer($record, $data['reason'] ?? '手动释放');
+
+                        Notification::make()->success()->title('客户已进入公海')->send();
+                    }),
+                Action::make('merge')
+                    ->label('合并客户')
+                    ->icon('heroicon-o-arrows-right-left')
+                    ->color('warning')
+                    ->visible(fn (): bool => CrmAccess::hasPermission('customer.merge'))
+                    ->form([
+                        Select::make('target_customer_id')
+                            ->label('合并到')
+                            ->options(fn (Customer $record): array => Customer::query()
+                                ->where('tenant_id', $record->tenant_id)
+                                ->whereKeyNot($record->getKey())
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all())
+                            ->searchable()
+                            ->required(),
+                    ])
+                    ->requiresConfirmation()
+                    ->action(function (Customer $record, array $data): void {
+                        $target = Customer::findOrFail($data['target_customer_id']);
+                        app(CustomerMergeService::class)->merge($record, $target);
+
+                        Notification::make()->success()->title('客户已合并')->send();
+                    }),
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
@@ -239,6 +336,7 @@ class CustomerResource extends Resource
     {
         return [
             'index' => ManageCustomers::route('/'),
+            'profile' => CustomerProfile::route('/{record}/profile'),
         ];
     }
 

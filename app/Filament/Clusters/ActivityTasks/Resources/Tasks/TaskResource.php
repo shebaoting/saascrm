@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\ActivityTasks\Resources\Tasks;
 
 use App\Filament\Clusters\ActivityTasks\ActivityTasksCluster;
 use App\Filament\Clusters\ActivityTasks\Resources\Tasks\Pages\ManageTasks;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Task;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -33,6 +34,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class TaskResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Task::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\Exports;
 
 use App\Filament\Clusters\SystemSettings\Resources\Exports\Pages\ManageExports;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Export;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -23,6 +24,8 @@ use Filament\Tables\Table;
 
 class ExportResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Export::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

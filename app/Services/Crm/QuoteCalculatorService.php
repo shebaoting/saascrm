@@ -4,6 +4,8 @@ namespace App\Services\Crm;
 
 use App\Models\Quote;
 use App\Models\QuoteItem;
+use App\Models\PriceBookItem;
+use Illuminate\Validation\ValidationException;
 
 class QuoteCalculatorService
 {
@@ -12,13 +14,23 @@ class QuoteCalculatorService
         $sku = $item->sku()->with('product')->first();
 
         if ($sku) {
+            $priceBookItem = $this->effectivePriceBookItem($item);
+            $listPrice = $priceBookItem?->price ?? $sku->price;
+            $unitPrice = $item->unit_price ?: $listPrice;
+
+            if ($priceBookItem?->min_price !== null && $unitPrice < $priceBookItem->min_price) {
+                throw ValidationException::withMessages([
+                    'unit_price' => 'SKU '.$sku->sku_code.' 的单价不能低于价格表最低价 '.$priceBookItem->min_price.'。',
+                ]);
+            }
+
             $item->forceFill([
                 'product_id' => $item->product_id ?: $sku->product_id,
                 'product_name' => $item->product_name ?: $sku->product?->name,
                 'sku_code' => $item->sku_code ?: $sku->sku_code,
                 'specifications' => $item->specifications ?: $sku->specifications,
-                'list_price' => $item->list_price ?: $sku->price,
-                'unit_price' => $item->unit_price ?: $sku->price,
+                'list_price' => $item->list_price ?: $listPrice,
+                'unit_price' => $unitPrice,
                 'cost_price' => $item->cost_price ?: $sku->cost_price,
                 'tax_rate' => $item->tax_rate ?: $sku->product?->tax_rate,
             ]);
@@ -33,6 +45,28 @@ class QuoteCalculatorService
         ]);
 
         return $item;
+    }
+
+    private function effectivePriceBookItem(QuoteItem $item): ?PriceBookItem
+    {
+        $quote = $item->quote;
+
+        if (! $quote?->price_book_id || ! $item->product_sku_id) {
+            return null;
+        }
+
+        return PriceBookItem::query()
+            ->where('tenant_id', $quote->tenant_id)
+            ->where('price_book_id', $quote->price_book_id)
+            ->where('product_sku_id', $item->product_sku_id)
+            ->where(function ($query): void {
+                $query->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($query): void {
+                $query->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+            })
+            ->latest('starts_at')
+            ->first();
     }
 
     public function recalculate(Quote $quote): Quote

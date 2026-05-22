@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\LeadCenter\Resources\LeadScoreRules;
 
 use App\Filament\Clusters\LeadCenter\LeadCenterCluster;
 use App\Filament\Clusters\LeadCenter\Resources\LeadScoreRules\Pages\ManageLeadScoreRules;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\LeadScoreRule;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -24,6 +25,8 @@ use Filament\Tables\Table;
 
 class LeadScoreRuleResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = LeadScoreRule::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -37,6 +40,8 @@ class LeadScoreRuleResource extends Resource
     protected static ?string $title = '线索评分规则';
 
     protected static bool $hasTitleCaseModelLabel = false;
+
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $cluster = LeadCenterCluster::class;
 

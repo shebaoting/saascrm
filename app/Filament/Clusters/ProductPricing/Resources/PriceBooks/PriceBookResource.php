@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\ProductPricing\Resources\PriceBooks;
 
 use App\Filament\Clusters\ProductPricing\ProductPricingCluster;
 use App\Filament\Clusters\ProductPricing\Resources\PriceBooks\Pages\ManagePriceBooks;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\PriceBook;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -24,6 +25,8 @@ use Filament\Tables\Table;
 
 class PriceBookResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = PriceBook::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

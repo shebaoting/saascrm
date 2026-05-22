@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\KnowledgeBase\Resources\KbArticles;
 
 use App\Filament\Clusters\KnowledgeBase\KnowledgeBaseCluster;
 use App\Filament\Clusters\KnowledgeBase\Resources\KbArticles\Pages\ManageKbArticles;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\KbArticle;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -31,6 +32,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class KbArticleResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = KbArticle::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

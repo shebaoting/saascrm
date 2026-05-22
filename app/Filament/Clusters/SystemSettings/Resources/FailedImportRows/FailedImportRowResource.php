@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\FailedImportRows;
 
 use App\Filament\Clusters\SystemSettings\Resources\FailedImportRows\Pages\ManageFailedImportRows;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\FailedImportRow;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -11,9 +12,9 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -23,6 +24,8 @@ use Filament\Tables\Table;
 
 class FailedImportRowResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = FailedImportRow::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -50,8 +53,9 @@ class FailedImportRowResource extends Resource
                 Select::make('import_id')
                     ->relationship('import', 'file_name')
                     ->required(),
-                TextInput::make('data')
-                    ->required(),
+                KeyValue::make('data')
+                    ->required()
+                    ->columnSpanFull(),
                 Textarea::make('validation_error')
                     ->columnSpanFull(),
             ]);

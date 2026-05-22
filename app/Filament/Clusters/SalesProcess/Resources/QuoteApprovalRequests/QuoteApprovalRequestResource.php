@@ -4,9 +4,11 @@ namespace App\Filament\Clusters\SalesProcess\Resources\QuoteApprovalRequests;
 
 use App\Filament\Clusters\SalesProcess\Resources\QuoteApprovalRequests\Pages\ManageQuoteApprovalRequests;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\QuoteApprovalRequest;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -16,6 +18,7 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -24,6 +27,8 @@ use Filament\Tables\Table;
 
 class QuoteApprovalRequestResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = QuoteApprovalRequest::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -125,6 +130,45 @@ class QuoteApprovalRequestResource extends Resource
                 //
             ])
             ->recordActions([
+                Action::make('approve')
+                    ->label('通过')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(fn (QuoteApprovalRequest $record): bool => $record->status === 'pending')
+                    ->requiresConfirmation()
+                    ->action(function (QuoteApprovalRequest $record): void {
+                        $record->forceFill([
+                            'approver_id' => $record->approver_id ?: auth()->id(),
+                            'status' => 'approved',
+                            'approved_at' => now(),
+                        ])->save();
+
+                        $record->quote()->update(['status' => 'approved']);
+
+                        Notification::make()->success()->title('报价审批已通过')->send();
+                    }),
+                Action::make('reject')
+                    ->label('拒绝')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (QuoteApprovalRequest $record): bool => $record->status === 'pending')
+                    ->form([
+                        TextInput::make('approval_comment')
+                            ->label('审批意见')
+                            ->maxLength(1000),
+                    ])
+                    ->action(function (QuoteApprovalRequest $record, array $data): void {
+                        $record->forceFill([
+                            'approver_id' => $record->approver_id ?: auth()->id(),
+                            'status' => 'rejected',
+                            'approval_comment' => $data['approval_comment'] ?? null,
+                            'rejected_at' => now(),
+                        ])->save();
+
+                        $record->quote()->update(['status' => 'rejected']);
+
+                        Notification::make()->success()->title('报价审批已拒绝')->send();
+                    }),
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),

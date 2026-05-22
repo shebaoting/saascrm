@@ -4,7 +4,10 @@ namespace App\Filament\Clusters\OrderFinance\Resources\Payments;
 
 use App\Filament\Clusters\OrderFinance\OrderFinanceCluster;
 use App\Filament\Clusters\OrderFinance\Resources\Payments\Pages\ManagePayments;
+use App\Filament\Concerns\UsesCrmAccess;
+use App\Models\OrderPaymentPlan;
 use App\Models\Payment;
+use App\Support\CrmAccess;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -22,9 +25,11 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -32,6 +37,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class PaymentResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Payment::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -56,7 +63,18 @@ class PaymentResource extends Resource
             ->components([
                 Select::make('order_id')
                     ->relationship('order', 'order_number')
+                    ->live()
                     ->required(),
+                Select::make('payment_plan_id')
+                    ->options(fn (Get $get): array => OrderPaymentPlan::query()
+                        ->where('tenant_id', CrmAccess::tenantId())
+                        ->when($get('order_id'), fn (Builder $query, int|string $orderId): Builder => $query->where('order_id', $orderId))
+                        ->orderBy('plan_date')
+                        ->get()
+                        ->mapWithKeys(fn (OrderPaymentPlan $plan): array => [
+                            $plan->id => $plan->plan_date?->format('Y-m-d').' / ¥'.number_format((float) $plan->plan_amount, 2),
+                        ])
+                        ->all()),
                 DatePicker::make('plan_date'),
                 DateTimePicker::make('received_at'),
                 TextInput::make('amount')
@@ -89,6 +107,10 @@ class PaymentResource extends Resource
                     ->visible(fn (Payment $record): bool => $record->trashed()),
                 TextEntry::make('order.order_number')
                     ->label('订单'),
+                TextEntry::make('paymentPlan.plan_date')
+                    ->label('收款计划')
+                    ->date()
+                    ->placeholder('-'),
                 TextEntry::make('plan_date')
                     ->date()
                     ->placeholder('-'),
@@ -126,6 +148,9 @@ class PaymentResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('order.order_number')
                     ->searchable(),
+                TextColumn::make('paymentPlan.plan_date')
+                    ->date()
+                    ->sortable(),
                 TextColumn::make('plan_date')
                     ->date()
                     ->sortable(),
@@ -145,6 +170,10 @@ class PaymentResource extends Resource
                     ->searchable(),
             ])
             ->filters([
+                SelectFilter::make('status')
+                    ->options(CrmUi::options('payment.status')),
+                SelectFilter::make('order_id')
+                    ->relationship('order', 'order_number'),
                 TrashedFilter::make(),
             ])
             ->recordActions([

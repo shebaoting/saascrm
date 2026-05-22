@@ -4,19 +4,23 @@ namespace App\Filament\Clusters\SalesProcess\Resources\SalesTargets;
 
 use App\Filament\Clusters\SalesProcess\Resources\SalesTargets\Pages\ManageSalesTargets;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
+use App\Filament\Concerns\UsesCrmAccess;
+use App\Models\Department;
 use App\Models\SalesTarget;
-use App\Support\Filament\CrmUi;
+use App\Models\User;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -24,6 +28,8 @@ use Filament\Tables\Table;
 
 class SalesTargetResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = SalesTarget::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -47,13 +53,23 @@ class SalesTargetResource extends Resource
         return $schema
             ->components([
                 Select::make('target_type')
-                    ->options(CrmUi::options('target_type'))
+                    ->options(static::targetTypeOptions())
                     ->required()
-                    ->default('user'),
-                TextInput::make('target_id')
-                    ->numeric(),
+                    ->default('user')
+                    ->live()
+                    ->afterStateUpdated(fn ($state, callable $set) => $set('target_id', null)),
+                Select::make('target_id')
+                    ->label('目标对象')
+                    ->options(fn (Get $get): array => static::targetOptions($get('target_type')))
+                    ->visible(fn (Get $get): bool => $get('target_type') !== 'tenant')
+                    ->required(fn (Get $get): bool => $get('target_type') !== 'tenant'),
                 Select::make('period_type')
-                    ->options(CrmUi::options('period_type'))
+                    ->options([
+                        'week' => '周',
+                        'month' => '月',
+                        'quarter' => '季度',
+                        'year' => '年',
+                    ])
                     ->required()
                     ->default('month'),
                 DatePicker::make('period_start')
@@ -87,7 +103,8 @@ class SalesTargetResource extends Resource
                     ->placeholder('-'),
                 TextEntry::make('target_type'),
                 TextEntry::make('target_id')
-                    ->numeric()
+                    ->label('目标对象')
+                    ->formatStateUsing(fn ($state, SalesTarget $record): string => static::targetDisplay($record))
                     ->placeholder('-'),
                 TextEntry::make('period_type'),
                 TextEntry::make('period_start')
@@ -119,7 +136,8 @@ class SalesTargetResource extends Resource
                 TextColumn::make('target_type')
                     ->searchable(),
                 TextColumn::make('target_id')
-                    ->numeric()
+                    ->label('目标对象')
+                    ->formatStateUsing(fn ($state, SalesTarget $record): string => static::targetDisplay($record))
                     ->sortable(),
                 TextColumn::make('period_type')
                     ->searchable(),
@@ -159,5 +177,56 @@ class SalesTargetResource extends Resource
         return [
             'index' => ManageSalesTargets::route('/'),
         ];
+    }
+
+    private static function targetTypeOptions(): array
+    {
+        return [
+            'tenant' => '全公司',
+            'department' => '部门',
+            'user' => '员工',
+        ];
+    }
+
+    private static function targetOptions(?string $targetType): array
+    {
+        $tenantId = Filament::getTenant()?->getKey()
+            ?? (app()->bound('currentTenant') ? app('currentTenant')?->getKey() : null);
+
+        return match ($targetType) {
+            'department' => Department::query()
+                ->when($tenantId, fn ($query) => $query->where('tenant_id', $tenantId))
+                ->orderBy('name')
+                ->pluck('name', 'id')
+                ->all(),
+            'user' => User::query()
+                ->when($tenantId, fn ($query) => $query->whereHas('tenants', fn ($tenantQuery) => $tenantQuery->whereKey($tenantId)))
+                ->orderBy('name')
+                ->pluck('name', 'id')
+                ->all(),
+            default => [],
+        };
+    }
+
+    private static function targetDisplay(SalesTarget $record): string
+    {
+        if ($record->target_type === 'tenant') {
+            return '全公司';
+        }
+
+        if (blank($record->target_id)) {
+            return '-';
+        }
+
+        return match ($record->target_type) {
+            'department' => Department::query()
+                ->where('tenant_id', $record->tenant_id)
+                ->whereKey($record->target_id)
+                ->value('name') ?? '#'.$record->target_id,
+            'user' => User::query()
+                ->whereKey($record->target_id)
+                ->value('name') ?? '#'.$record->target_id,
+            default => '#'.$record->target_id,
+        };
     }
 }

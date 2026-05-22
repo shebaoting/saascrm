@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\LeadCenter\Resources\AssignmentRules;
 
 use App\Filament\Clusters\LeadCenter\LeadCenterCluster;
 use App\Filament\Clusters\LeadCenter\Resources\AssignmentRules\Pages\ManageAssignmentRules;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\AssignmentRule;
 use App\Models\User;
 use App\Support\Filament\CrmUi;
@@ -27,6 +28,8 @@ use Filament\Tables\Table;
 
 class AssignmentRuleResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = AssignmentRule::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -40,6 +43,8 @@ class AssignmentRuleResource extends Resource
     protected static ?string $title = '分配规则';
 
     protected static bool $hasTitleCaseModelLabel = false;
+
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $cluster = LeadCenterCluster::class;
 

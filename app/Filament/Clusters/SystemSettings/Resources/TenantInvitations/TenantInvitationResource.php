@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\TenantInvitations;
 
 use App\Filament\Clusters\SystemSettings\Resources\TenantInvitations\Pages\ManageTenantInvitations;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Department;
 use App\Models\Role;
 use App\Models\TenantInvitation;
@@ -25,6 +26,8 @@ use Filament\Tables\Table;
 
 class TenantInvitationResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = TenantInvitation::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

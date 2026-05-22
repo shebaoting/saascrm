@@ -1,8 +1,122 @@
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
 @source '../../../../app/Filament/**/*.php';
 @source '../../../../resources/views/**/*.blade.php';
+@source '../../../../resources/views/livewire/**/*.blade.php';
 @source '../../../../vendor/filament/**/*.blade.php';
+@source '../../../../resources/views/filament/**/**/*.blade.php';
+
+
+.fi-body {
+    @apply bg-[#f1f5f9]
+}
+.fi-fo-table-repeater table,
+.fi-tabs:not(.fi-contained),
+.fi-ta-ctn,
+.fi-section,
+.fi-btn,
+.fi-wi-stats-overview-stat,
+.fi-fo-repeater .fi-fo-repeater-item,
+.fi-sc-tabs,
+.fi-callout,
+.fi-section:not(.fi-section-not-contained):not(.fi-aside) {
+    @apply !rounded-sm
+}
+
+.fi-input-wrp {
+    @apply !rounded-xs
+}
+
+
+.fi-ta-ctn,
+.fi-input-wrp,
+.fi-wi-stats-overview-stat,
+.fi-tabs:not(.fi-contained),
+.fi-section:not(.fi-section-not-contained):not(.fi-aside) {
+    @apply !shadow-xs
+}
+
+.fi-ta-ctn,
+.fi-wi-stats-overview-stat,
+.fi-simple-main,
+.fi-section:not(.fi-section-not-contained):not(.fi-aside) {
+    @apply ring-0
+}
+
+
+.fi-ta-table > tbody > :where(.fi-ta-table > tbody > :not(:last-child)),
+.fi-ta-ctn > :where(.fi-ta-ctn > :not(:last-child)),
+.fi-ta-table > :where(.fi-ta-table > :not(:last-child)) {
+    @apply border-gray-100
+}
+.fi-sidebar-item-icon {
+    @apply w-4 h-4 text-gray-300
+}
+.fi-sidebar-group-label {
+    @apply pl-6 text-gray-400
+}
+.fi-simple-main {
+    @media (width >= 40rem) {
+        @apply !rounded-sm
+    }
+}
+
+.fi-page-main:has(.fi-sc-form):not(:has(.fi-section)) {
+    background-color: white;
+    padding: 30px 50px;
+    border-radius: 0.25rem;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+    background-clip: border-box;
+}
+.fi-sc-tabs {
+    &.fi-contained {
+        @apply shadow-none ring-0;
+    }
+}
+
+/* 1. 当包含 Tabs 时，将外壳 page-main 的 padding 设为 0 */
+.fi-page-main:has(.fi-sc-form):not(:has(.fi-section)):has(.fi-sc-tabs) {
+    padding: 0;
+}
+
+/* 2. 当包含 Tabs 时，将内部的操作按钮区域 (.fi-sc-actions) 加上内边距，
+      防止按钮紧贴容器边缘 */
+.fi-page-main:has(.fi-sc-tabs) .fi-sc-actions {
+    padding: 0px 0 20px 20px;
+}
+
+.filament-tree .dd-item .dd-handle, .filament-tree .dd-item>.loading-indicator, .dd-dragel .dd-handle {
+    border-radius: 3px;
+    border-color: #f1f5f9;
+}
+.filament-tree .dd-item .dd-handle {
+    background-color: #fafafa;
+}
+[dir=ltr] .btn-group button:first-of-type {
+    border-radius: .2rem 0 0 .2rem !important;
+}
+[dir=rtl] .btn-group button:first-of-type, .btn-group button:last-of-type {
+    border-radius: 0 .2rem .2rem 0 !important;
+}
+.filament-tree-component .nestable-menu {
+    display: none !important;
+}
+.fi-main {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+.fi-in-repeatable {
+    &.fi-contained {
+        & > .fi-in-repeatable-item {
+            @apply !rounded-sm;
+        }
+    }
+}
+
+
 
 .crm-metric-page {
     display: flex;
@@ -157,6 +271,223 @@
     padding: 1.5rem 1rem;
 }
 
+.crm-profile-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.crm-profile-hero {
+    background: #ffffff;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+}
+
+.dark .crm-profile-hero {
+    background: var(--gray-900);
+    border-color: rgb(255 255 255 / 0.1);
+}
+
+.crm-profile-heading {
+    align-items: flex-start;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.crm-profile-kicker {
+    color: var(--gray-500);
+    font-size: 0.8rem;
+    line-height: 1.1rem;
+}
+
+.crm-profile-title {
+    color: var(--gray-950);
+    font-size: 1.5rem;
+    font-weight: 650;
+    line-height: 2rem;
+}
+
+.dark .crm-profile-title {
+    color: #ffffff;
+}
+
+.crm-profile-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.crm-profile-tags span {
+    background: var(--gray-100);
+    border-radius: 999px;
+    color: var(--gray-700);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    padding: 0.35rem 0.65rem;
+}
+
+.dark .crm-profile-tags span {
+    background: rgb(255 255 255 / 0.08);
+    color: var(--gray-200);
+}
+
+.crm-profile-facts {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.crm-profile-facts div {
+    color: var(--gray-800);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+.dark .crm-profile-facts div {
+    color: var(--gray-200);
+}
+
+.crm-profile-facts span {
+    color: var(--gray-500);
+    display: block;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    margin-bottom: 0.2rem;
+}
+
+.crm-profile-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.crm-board {
+    display: grid;
+    gap: 1rem;
+    grid-auto-columns: minmax(18rem, 1fr);
+    grid-auto-flow: column;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+
+.crm-board-column {
+    background: #ffffff;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    min-height: 24rem;
+    min-width: 18rem;
+    transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.dark .crm-board-column {
+    background: var(--gray-900);
+    border-color: rgb(255 255 255 / 0.1);
+}
+
+.crm-board-column.is-drop-target {
+    background: #f8fafc;
+    border-color: var(--primary-500);
+}
+
+.dark .crm-board-column.is-drop-target {
+    background: rgb(255 255 255 / 0.06);
+    border-color: var(--primary-400);
+}
+
+.crm-board-head {
+    border-bottom: 1px solid var(--gray-200);
+    padding: 0.9rem 1rem;
+}
+
+.dark .crm-board-head {
+    border-color: rgb(255 255 255 / 0.1);
+}
+
+.crm-board-title,
+.crm-board-card-title {
+    color: var(--gray-950);
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+}
+
+.dark .crm-board-title,
+.dark .crm-board-card-title {
+    color: #ffffff;
+}
+
+.crm-board-meta,
+.crm-board-card-meta,
+.crm-board-empty {
+    color: var(--gray-500);
+    font-size: 0.8rem;
+    line-height: 1.1rem;
+}
+
+.crm-board-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+}
+
+.crm-board-card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-100);
+    border-radius: 0.4rem;
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.75rem;
+    transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.crm-board-card.is-dragging {
+    cursor: grabbing;
+    opacity: 0.55;
+    transform: scale(0.99);
+}
+
+.dark .crm-board-card {
+    background: rgb(255 255 255 / 0.05);
+    border-color: rgb(255 255 255 / 0.1);
+}
+
+.crm-board-card-value {
+    color: var(--gray-800);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.crm-board-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.crm-board-actions button {
+    background: #ffffff;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.3rem;
+    color: var(--gray-700);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    padding: 0.35rem 0.5rem;
+}
+
+.dark .crm-board-actions button {
+    background: transparent;
+    border-color: rgb(255 255 255 / 0.15);
+    color: var(--gray-200);
+}
+
 @media (min-width: 640px) {
     .crm-metric-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -165,10 +496,24 @@
     .crm-record-row {
         grid-template-columns: minmax(0, 1fr) 10rem 8.75rem;
     }
+
+    .crm-profile-facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (min-width: 1280px) {
     .crm-metric-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .crm-profile-facts,
+    .crm-profile-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .crm-profile-grid > .crm-record-panel:nth-child(1),
+    .crm-profile-grid > .crm-record-panel:nth-child(5) {
+        grid-column: span 2 / span 2;
     }
 }

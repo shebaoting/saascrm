@@ -12,6 +12,8 @@ class LeadAssignmentService
 {
     public function claim(Lead $lead, User $user): Lead
     {
+        app(CustomerPoolService::class)->claimLead($lead, $user);
+
         $lead->forceFill([
             'owner_user_id' => $user->id,
             'status' => 'working',
@@ -23,6 +25,8 @@ class LeadAssignmentService
 
     public function release(Lead $lead, ?string $reason = null): Lead
     {
+        app(CustomerPoolService::class)->releaseLead($lead, $reason);
+
         $lead->forceFill([
             'owner_user_id' => null,
             'status' => 'pooled',

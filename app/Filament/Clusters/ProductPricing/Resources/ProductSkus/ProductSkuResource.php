@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\ProductPricing\Resources\ProductSkus;
 
 use App\Filament\Clusters\ProductPricing\ProductPricingCluster;
 use App\Filament\Clusters\ProductPricing\Resources\ProductSkus\Pages\ManageProductSkus;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\ProductSku;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -15,6 +16,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -32,6 +34,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ProductSkuResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = ProductSku::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -59,7 +63,8 @@ class ProductSkuResource extends Resource
                     ->required(),
                 TextInput::make('sku_code')
                     ->required(),
-                TextInput::make('specifications'),
+                KeyValue::make('specifications')
+                    ->columnSpanFull(),
                 TextInput::make('price')
                     ->required()
                     ->numeric()

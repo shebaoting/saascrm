@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\ProductPricing\Resources\ProductGroups;
 
 use App\Filament\Clusters\ProductPricing\ProductPricingCluster;
 use App\Filament\Clusters\ProductPricing\Resources\ProductGroups\Pages\ManageProductGroups;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\ProductGroup;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -28,6 +29,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ProductGroupResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = ProductGroup::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

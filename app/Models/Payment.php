@@ -19,4 +19,9 @@ class Payment extends TenantModel
     {
         return $this->belongsTo(Order::class);
     }
+
+    public function paymentPlan(): BelongsTo
+    {
+        return $this->belongsTo(OrderPaymentPlan::class, 'payment_plan_id');
+    }
 }

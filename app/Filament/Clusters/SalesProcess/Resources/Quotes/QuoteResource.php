@@ -4,10 +4,16 @@ namespace App\Filament\Clusters\SalesProcess\Resources\Quotes;
 
 use App\Filament\Clusters\SalesProcess\Resources\Quotes\Pages\ManageQuotes;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
+use App\Filament\Concerns\UsesCrmAccess;
+use App\Models\Contact;
 use App\Models\Quote;
+use App\Models\QuoteApprovalRequest;
+use App\Models\User;
 use App\Services\Crm\QuoteCalculatorService;
 use App\Services\Crm\QuotePdfService;
 use App\Services\Crm\QuoteToOrderService;
+use App\Support\CrmAccess;
+use App\Support\Filament\CustomFieldUi;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -22,22 +28,29 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Validation\ValidationException;
 
 class QuoteResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Quote::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -71,9 +84,15 @@ class QuoteResource extends Resource
                     ->required(),
                 Select::make('customer_id')
                     ->relationship('customer', 'name')
+                    ->live()
                     ->required(),
                 Select::make('contact_id')
-                    ->relationship('contact', 'name'),
+                    ->options(fn (Get $get): array => Contact::query()
+                        ->where('tenant_id', CrmAccess::tenantId())
+                        ->when($get('customer_id'), fn (Builder $query, int|string $customerId): Builder => $query->where('customer_id', $customerId))
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all()),
                 Select::make('opportunity_id')
                     ->relationship('opportunity', 'name'),
                 Select::make('user_id')
@@ -82,6 +101,40 @@ class QuoteResource extends Resource
                     ->required(),
                 Select::make('price_book_id')
                     ->relationship('priceBook', 'name'),
+                Repeater::make('items')
+                    ->label('报价明细')
+                    ->relationship('items')
+                    ->schema([
+                        Select::make('product_id')
+                            ->relationship('product', 'name')
+                            ->required(),
+                        Select::make('product_sku_id')
+                            ->relationship('sku', 'sku_code')
+                            ->required(),
+                        TextInput::make('quantity')
+                            ->required()
+                            ->numeric()
+                            ->default(1),
+                        TextInput::make('unit_price')
+                            ->numeric()
+                            ->default(0)
+                            ->prefix('¥'),
+                        TextInput::make('discount_amount')
+                            ->numeric()
+                            ->default(0)
+                            ->prefix('¥'),
+                        TextInput::make('cost_price')
+                            ->numeric()
+                            ->default(0)
+                            ->prefix('¥'),
+                        TextInput::make('tax_rate')
+                            ->numeric()
+                            ->default(0)
+                            ->suffix('%'),
+                    ])
+                    ->columns(4)
+                    ->columnSpanFull()
+                    ->addActionLabel('添加报价明细'),
                 TextInput::make('subtotal_amount')
                     ->required()
                     ->numeric()
@@ -98,7 +151,7 @@ class QuoteResource extends Resource
                     ->required()
                     ->numeric()
                     ->default(0)
-                    ->prefix('$'),
+                    ->prefix('¥'),
                 TextInput::make('total_profit')
                     ->required()
                     ->numeric()
@@ -118,7 +171,7 @@ class QuoteResource extends Resource
                 DatePicker::make('valid_until'),
                 Textarea::make('notes')
                     ->columnSpanFull(),
-                TextInput::make('custom_fields'),
+                ...CustomFieldUi::formSections('quote'),
                 TextInput::make('pdf_path'),
                 DateTimePicker::make('accepted_at'),
             ]);
@@ -178,6 +231,7 @@ class QuoteResource extends Resource
                 TextEntry::make('accepted_at')
                     ->dateTime()
                     ->placeholder('-'),
+                ...CustomFieldUi::infolistSections('quote'),
             ]);
     }
 
@@ -246,9 +300,15 @@ class QuoteResource extends Resource
                 TextColumn::make('accepted_at')
                     ->dateTime()
                     ->sortable(),
+                ...CustomFieldUi::tableColumns('quote'),
             ])
             ->filters([
+                SelectFilter::make('status')
+                    ->options(CrmUi::options('quote.status')),
+                SelectFilter::make('customer_id')
+                    ->relationship('customer', 'name'),
                 TrashedFilter::make(),
+                ...CustomFieldUi::tableFilters('quote'),
             ])
             ->recordActions([
                 Action::make('recalculate')
@@ -259,13 +319,67 @@ class QuoteResource extends Resource
 
                         Notification::make()->success()->title('报价金额已重算')->send();
                     }),
+                Action::make('request_approval')
+                    ->label('提交审批')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->visible(fn (Quote $record): bool => CrmAccess::hasPermission('quote.update') && in_array($record->status, ['draft', 'rejected'], true))
+                    ->form([
+                        Select::make('approver_id')
+                            ->label('审批人')
+                            ->options(fn (Quote $record): array => User::query()
+                                ->whereHas('tenants', fn (Builder $query) => $query->whereKey($record->tenant_id))
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all()),
+                        Textarea::make('reason')
+                            ->label('审批原因')
+                            ->maxLength(1000),
+                    ])
+                    ->action(function (Quote $record, array $data): void {
+                        QuoteApprovalRequest::create([
+                            'tenant_id' => $record->tenant_id,
+                            'quote_id' => $record->id,
+                            'requested_by' => auth()->id(),
+                            'approver_id' => $data['approver_id'] ?? null,
+                            'status' => 'pending',
+                            'reason' => $data['reason'] ?? null,
+                            'requested_at' => now(),
+                        ]);
+
+                        $record->forceFill(['status' => 'pending_approval'])->save();
+
+                        Notification::make()->success()->title('报价已提交审批')->send();
+                    }),
                 Action::make('approve')
                     ->label('审批通过')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (Quote $record): bool => in_array($record->status, ['draft', 'pending_approval'], true))
+                    ->visible(fn (Quote $record): bool => CrmAccess::hasPermission('quote.approve') && in_array($record->status, ['draft', 'pending_approval'], true))
                     ->requiresConfirmation()
                     ->action(function (Quote $record): void {
+                        $approval = $record->approvals()
+                            ->where('status', 'pending')
+                            ->latest('requested_at')
+                            ->first();
+
+                        if ($approval) {
+                            $approval->forceFill([
+                                'approver_id' => $approval->approver_id ?: auth()->id(),
+                                'status' => 'approved',
+                                'approved_at' => now(),
+                            ])->save();
+                        } else {
+                            QuoteApprovalRequest::create([
+                                'tenant_id' => $record->tenant_id,
+                                'quote_id' => $record->id,
+                                'requested_by' => $record->user_id ?: auth()->id(),
+                                'approver_id' => auth()->id(),
+                                'status' => 'approved',
+                                'requested_at' => now(),
+                                'approved_at' => now(),
+                            ]);
+                        }
+
                         $record->forceFill(['status' => 'approved'])->save();
 
                         Notification::make()->success()->title('报价已批准')->send();
@@ -282,12 +396,20 @@ class QuoteResource extends Resource
                     ->label('转订单')
                     ->icon('heroicon-o-document-check')
                     ->color('success')
-                    ->visible(fn (Quote $record): bool => $record->status !== 'accepted')
+                    ->visible(fn (Quote $record): bool => CrmAccess::hasPermission('quote.convert_order') && $record->status !== 'accepted')
                     ->requiresConfirmation()
                     ->action(function (Quote $record): void {
-                        app(QuoteToOrderService::class)->convert($record);
+                        try {
+                            app(QuoteToOrderService::class)->convert($record);
 
-                        Notification::make()->success()->title('订单已生成')->send();
+                            Notification::make()->success()->title('订单已生成')->send();
+                        } catch (ValidationException $exception) {
+                            Notification::make()
+                                ->danger()
+                                ->title('不能转订单')
+                                ->body(collect($exception->errors())->flatten()->join("\n"))
+                                ->send();
+                        }
                     }),
                 ViewAction::make(),
                 EditAction::make(),

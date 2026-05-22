@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\ActivityTasks\Resources\Activities;
 
 use App\Filament\Clusters\ActivityTasks\ActivityTasksCluster;
 use App\Filament\Clusters\ActivityTasks\Resources\Activities\Pages\ManageActivities;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\Activity;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
@@ -32,6 +33,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ActivityResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Activity::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

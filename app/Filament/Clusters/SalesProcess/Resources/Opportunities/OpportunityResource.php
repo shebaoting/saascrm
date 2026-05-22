@@ -4,9 +4,13 @@ namespace App\Filament\Clusters\SalesProcess\Resources\Opportunities;
 
 use App\Filament\Clusters\SalesProcess\Resources\Opportunities\Pages\ManageOpportunities;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
+use App\Filament\Concerns\UsesCrmAccess;
+use App\Models\Contact;
 use App\Models\Opportunity;
 use App\Models\PipelineStage;
 use App\Services\Crm\OpportunityStageService;
+use App\Support\CrmAccess;
+use App\Support\Filament\CustomFieldUi;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -26,9 +30,11 @@ use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -36,6 +42,8 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class OpportunityResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = Opportunity::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
@@ -60,14 +68,27 @@ class OpportunityResource extends Resource
             ->components([
                 Select::make('customer_id')
                     ->relationship('customer', 'name')
+                    ->live()
                     ->required(),
                 Select::make('contact_id')
-                    ->relationship('contact', 'name'),
+                    ->options(fn (Get $get): array => Contact::query()
+                        ->where('tenant_id', CrmAccess::tenantId())
+                        ->when($get('customer_id'), fn (Builder $query, int|string $customerId): Builder => $query->where('customer_id', $customerId))
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all()),
                 Select::make('pipeline_id')
                     ->relationship('pipeline', 'name')
+                    ->live()
                     ->required(),
                 Select::make('pipeline_stage_id')
-                    ->relationship('stage', 'name')
+                    ->options(fn (Get $get): array => PipelineStage::query()
+                        ->where('tenant_id', CrmAccess::tenantId())
+                        ->when($get('pipeline_id'), fn (Builder $query, int|string $pipelineId): Builder => $query->where('pipeline_id', $pipelineId))
+                        ->where('is_active', true)
+                        ->orderBy('sort_order')
+                        ->pluck('name', 'id')
+                        ->all())
                     ->required(),
                 TextInput::make('name')
                     ->required(),
@@ -95,6 +116,7 @@ class OpportunityResource extends Resource
                 TextInput::make('invalid_reason'),
                 TextInput::make('invalid_remarks'),
                 TextInput::make('notes'),
+                ...CustomFieldUi::formSections('opportunity'),
             ]);
     }
 
@@ -149,6 +171,7 @@ class OpportunityResource extends Resource
                     ->placeholder('-'),
                 TextEntry::make('notes')
                     ->placeholder('-'),
+                ...CustomFieldUi::infolistSections('opportunity'),
             ]);
     }
 
@@ -211,9 +234,17 @@ class OpportunityResource extends Resource
                     ->searchable(),
                 TextColumn::make('notes')
                     ->searchable(),
+                ...CustomFieldUi::tableColumns('opportunity'),
             ])
             ->filters([
+                SelectFilter::make('pipeline_id')
+                    ->relationship('pipeline', 'name'),
+                SelectFilter::make('pipeline_stage_id')
+                    ->relationship('stage', 'name'),
+                SelectFilter::make('responsible_user_id')
+                    ->relationship('responsible', 'name'),
                 TrashedFilter::make(),
+                ...CustomFieldUi::tableFilters('opportunity'),
             ])
             ->recordActions([
                 Action::make('move_stage')

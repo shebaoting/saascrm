@@ -4,6 +4,7 @@ namespace App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories;
 
 use App\Filament\Clusters\CustomerCenter\CustomerCenterCluster;
 use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories\Pages\ManageCustomerPoolHistories;
+use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\CustomerPoolHistory;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
@@ -23,6 +24,8 @@ use Filament\Tables\Table;
 
 class CustomerPoolHistoryResource extends Resource
 {
+    use UsesCrmAccess;
+
     protected static ?string $model = CustomerPoolHistory::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
