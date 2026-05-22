@@ -61,6 +61,8 @@ class QuoteToOrderService
                 ]);
             }
 
+            $previousQuoteStatus = $quote->status;
+
             $quote->forceFill([
                 'status' => 'accepted',
                 'accepted_at' => now(),
@@ -82,6 +84,25 @@ class QuoteToOrderService
                 'lifecycle_stage' => 'won',
                 'first_order_at' => $quote->customer?->first_order_at ?: now(),
                 'last_order_at' => now(),
+            ]);
+
+            app(ActivityService::class)->recordSystemEvent(
+                $quote->tenant_id,
+                '报价转订单：'.$order->order_number,
+                '报价 '.$quote->quote_number.' 已转为订单，金额 '.number_format((float) $order->total_amount, 2),
+                [
+                    'customer' => $quote->customer,
+                    'contact' => $quote->contact,
+                    'opportunity' => $quote->opportunity,
+                ],
+            );
+
+            app(AuditLogService::class)->record('quote_converted_to_order', $quote, [
+                'status' => $previousQuoteStatus,
+            ], [
+                'status' => 'accepted',
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
             ]);
 
             return $order;

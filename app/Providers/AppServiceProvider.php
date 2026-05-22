@@ -21,6 +21,8 @@ use App\Models\QuoteItem;
 use App\Services\Crm\ActivityService;
 use App\Services\Crm\AutomationService;
 use App\Services\Crm\DuplicateDetectionService;
+use App\Services\Crm\LeadAssignmentService;
+use App\Services\Crm\LeadScoringService;
 use App\Services\Crm\OrderFinanceService;
 use App\Services\Crm\PlanLimitService;
 use App\Services\Crm\QuoteCalculatorService;
@@ -95,7 +97,13 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Lead::created(function (Lead $lead): void {
-            app(AutomationService::class)->run('lead_created', $lead);
+            $lead = app(LeadScoringService::class)->refresh($lead);
+
+            if (! $lead->owner_user_id) {
+                $lead = app(LeadAssignmentService::class)->assignByRules($lead) ?: $lead;
+            }
+
+            app(AutomationService::class)->run('lead_created', $lead->refresh());
         });
 
         Lead::saving(fn (Lead $lead): bool => $this->normalizeContactFields($lead));

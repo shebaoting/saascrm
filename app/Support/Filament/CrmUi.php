@@ -423,6 +423,9 @@ class CrmUi
                 'meeting' => '会议',
                 'visit' => '拜访',
                 'wechat' => '微信',
+                'quote' => '报价',
+                'order' => '订单',
+                'system' => '系统事件',
             ],
             'attachment.category' => [
                 'contract' => '合同',

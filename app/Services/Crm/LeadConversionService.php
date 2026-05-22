@@ -76,6 +76,8 @@ class LeadConversionService
                 }
             }
 
+            $previousStatus = $lead->status;
+
             $lead->forceFill([
                 'status' => 'converted',
                 'qualification_status' => 'qualified',
@@ -83,6 +85,24 @@ class LeadConversionService
                 'converted_at' => now(),
                 'converted_by' => Auth::id(),
             ])->save();
+
+            app(ActivityService::class)->recordSystemEvent(
+                $lead->tenant_id,
+                '线索转客户：'.$customer->name,
+                null,
+                [
+                    'lead' => $lead,
+                    'customer' => $customer,
+                    'owner_user_id' => $customer->owner_user_id,
+                ],
+            );
+
+            app(AuditLogService::class)->record('lead_converted', $lead, [
+                'status' => $previousStatus,
+            ], [
+                'status' => 'converted',
+                'customer_id' => $customer->id,
+            ]);
 
             return $customer;
         });

@@ -3,14 +3,20 @@
 namespace Tests\Feature;
 
 use App\Filament\Clusters\LeadCenter\Resources\Leads\LeadResource;
-use App\Models\CustomField;
+use App\Models\Activity;
+use App\Models\AssignmentRule;
+use App\Models\AssignmentRuleCondition;
+use App\Models\AuditLog;
 use App\Models\AutomationAction;
 use App\Models\AutomationRule;
 use App\Models\Attachment;
 use App\Models\Contact;
+use App\Models\CustomField;
 use App\Models\Customer;
+use App\Models\Department;
 use App\Models\DuplicateRecord;
 use App\Models\Lead;
+use App\Models\LeadScoreRule;
 use App\Models\Opportunity;
 use App\Models\Order;
 use App\Models\OrderPaymentPlan;
@@ -32,6 +38,7 @@ use App\Services\Crm\CustomerMergeService;
 use App\Services\Crm\CustomerPoolService;
 use App\Services\Crm\DataPortService;
 use App\Services\Crm\LeadConversionService;
+use App\Services\Crm\LeadScoringService;
 use App\Services\Crm\OpportunityStageService;
 use App\Services\Crm\QuotePdfService;
 use App\Services\Crm\QuoteToOrderService;
@@ -172,6 +179,20 @@ class CrmWorkflowTest extends TestCase
             'sku_code' => 'CRM-001',
             'quantity' => 2,
         ]);
+
+        $this->assertDatabaseHas('activities', [
+            'tenant_id' => $tenant->id,
+            'customer_id' => $customer->id,
+            'type' => 'system',
+            'subject' => '报价转订单：'.$order->order_number,
+        ]);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'tenant_id' => $tenant->id,
+            'model_type' => Quote::class,
+            'model_id' => $quote->id,
+            'action' => 'quote_converted_to_order',
+        ]);
     }
 
     public function test_customer_pool_and_merge_keep_history(): void
@@ -252,6 +273,109 @@ class CrmWorkflowTest extends TestCase
             'lead_id' => $lead->id,
             'title' => '联系官网线索',
             'assignee_id' => $user->id,
+        ]);
+    }
+
+    public function test_lead_scoring_rules_explain_and_batch_recalculate_scores(): void
+    {
+        $user = $this->user();
+        $tenant = $this->tenant($user);
+        $this->actingAs($user);
+
+        $lead = Lead::create([
+            'tenant_id' => $tenant->id,
+            'company_name' => '官网高意向',
+            'source' => '官网',
+            'phone' => '13900001111',
+            'email' => 'web@example.com',
+        ]);
+
+        LeadScoreRule::create([
+            'tenant_id' => $tenant->id,
+            'name' => '官网来源加分',
+            'field' => 'source',
+            'operator' => 'eq',
+            'value' => ['官网'],
+            'score' => 40,
+            'is_active' => true,
+        ]);
+
+        $count = app(LeadScoringService::class)->refreshMany($tenant->id);
+        $lead->refresh();
+        $explanation = app(LeadScoringService::class)->explain($lead);
+
+        $this->assertSame(1, $count);
+        $this->assertSame($explanation['total'], $lead->score);
+        $this->assertSame(['官网来源加分'], collect($explanation['rules'])->pluck('name')->all());
+        $this->assertGreaterThanOrEqual(60, $lead->score);
+    }
+
+    public function test_new_lead_is_auto_assigned_by_conditions_to_least_busy_sales(): void
+    {
+        $manager = $this->user();
+        $salesA = $this->user();
+        $salesB = $this->user();
+        $tenant = $this->tenant($manager);
+        $this->attachTenantUser($tenant, $salesA);
+        $this->attachTenantUser($tenant, $salesB);
+        $this->actingAs($manager);
+
+        $department = Department::create([
+            'tenant_id' => $tenant->id,
+            'name' => '华东一部',
+            'sort_order' => 1,
+        ]);
+
+        $department->users()->attach($salesA->id, ['tenant_id' => $tenant->id, 'is_leader' => false, 'main_department' => true]);
+        $department->users()->attach($salesB->id, ['tenant_id' => $tenant->id, 'is_leader' => false, 'main_department' => true]);
+
+        Lead::create([
+            'tenant_id' => $tenant->id,
+            'company_name' => '销售A已有线索',
+            'source' => '展会',
+            'owner_user_id' => $salesA->id,
+            'status' => 'working',
+        ]);
+
+        $rule = AssignmentRule::create([
+            'tenant_id' => $tenant->id,
+            'name' => '官网线索分配',
+            'target_type' => 'lead',
+            'method' => 'least_busy',
+            'department_id' => $department->id,
+            'max_per_user_daily' => 10,
+            'priority' => 100,
+            'is_active' => true,
+        ]);
+
+        AssignmentRuleCondition::create([
+            'tenant_id' => $tenant->id,
+            'assignment_rule_id' => $rule->id,
+            'field' => 'source',
+            'operator' => 'eq',
+            'value' => ['官网'],
+        ]);
+
+        $lead = Lead::create([
+            'tenant_id' => $tenant->id,
+            'company_name' => '官网待分配线索',
+            'source' => '官网',
+        ]);
+
+        $this->assertSame($salesB->id, $lead->refresh()->owner_user_id);
+        $this->assertSame('working', $lead->status);
+        $this->assertDatabaseHas('customer_pool_histories', [
+            'tenant_id' => $tenant->id,
+            'target_type' => Lead::class,
+            'target_id' => $lead->id,
+            'action' => 'claim',
+            'to_user_id' => $salesB->id,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'tenant_id' => $tenant->id,
+            'model_type' => Lead::class,
+            'model_id' => $lead->id,
+            'action' => 'lead_auto_assigned',
         ]);
     }
 
@@ -783,5 +907,16 @@ class CrmWorkflowTest extends TestCase
         ]);
 
         return $tenant;
+    }
+
+    private function attachTenantUser(Tenant $tenant, User $user): void
+    {
+        $tenant->users()->attach($user->id, [
+            'member_name' => $user->name,
+            'is_owner' => false,
+            'is_admin' => false,
+            'status' => 'active',
+            'joined_at' => now(),
+        ]);
     }
 }

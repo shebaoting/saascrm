@@ -18,6 +18,7 @@ class OpportunityStageService
 
         return DB::transaction(function () use ($opportunity, $stage, $notes): Opportunity {
             $fromStageId = $opportunity->pipeline_stage_id;
+            $fromStageName = $opportunity->stage?->name;
 
             $opportunity->forceFill([
                 'pipeline_id' => $stage->pipeline_id,
@@ -39,6 +40,20 @@ class OpportunityStageService
             ]);
 
             app(AutomationService::class)->run('opportunity_stage_changed', $opportunity->refresh());
+            app(ActivityService::class)->recordSystemEvent(
+                $opportunity->tenant_id,
+                '商机阶段推进：'.($fromStageName ?: '未设置').' -> '.$stage->name,
+                $notes,
+                ['opportunity' => $opportunity->refresh()],
+            );
+            app(AuditLogService::class)->record('opportunity_stage_changed', $opportunity, [
+                'pipeline_stage_id' => $fromStageId,
+                'stage_name' => $fromStageName,
+            ], [
+                'pipeline_stage_id' => $stage->id,
+                'stage_name' => $stage->name,
+                'notes' => $notes,
+            ]);
 
             return $opportunity->refresh();
         });

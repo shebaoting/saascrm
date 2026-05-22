@@ -12,6 +12,8 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
@@ -41,7 +43,7 @@ class LeadScoreRuleResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
 
     protected static ?string $cluster = LeadCenterCluster::class;
 
@@ -53,16 +55,22 @@ class LeadScoreRuleResource extends Resource
             ->components([
                 TextInput::make('name')
                     ->required(),
-                TextInput::make('field')
+                Select::make('field')
+                    ->options(static::fieldOptions())
+                    ->searchable()
                     ->required(),
-                TextInput::make('operator')
+                Select::make('operator')
+                    ->options(static::operatorOptions())
                     ->required(),
-                TextInput::make('value'),
+                TagsInput::make('value')
+                    ->separator(',')
+                    ->placeholder('可填多个值'),
                 TextInput::make('score')
                     ->required()
                     ->numeric()
                     ->default(0),
                 Toggle::make('is_active')
+                    ->default(true)
                     ->required(),
             ]);
     }
@@ -80,6 +88,8 @@ class LeadScoreRuleResource extends Resource
                 TextEntry::make('name'),
                 TextEntry::make('field'),
                 TextEntry::make('operator'),
+                TextEntry::make('value')
+                    ->formatStateUsing(fn ($state): string => implode('、', \Illuminate\Support\Arr::wrap($state))),
                 TextEntry::make('score')
                     ->numeric(),
                 IconEntry::make('is_active')
@@ -106,6 +116,9 @@ class LeadScoreRuleResource extends Resource
                     ->searchable(),
                 TextColumn::make('operator')
                     ->searchable(),
+                TextColumn::make('value')
+                    ->formatStateUsing(fn ($state): string => implode('、', \Illuminate\Support\Arr::wrap($state)))
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('score')
                     ->numeric()
                     ->sortable(),
@@ -131,6 +144,45 @@ class LeadScoreRuleResource extends Resource
     {
         return [
             'index' => ManageLeadScoreRules::route('/'),
+        ];
+    }
+
+    public static function fieldOptions(): array
+    {
+        return [
+            'source' => '来源',
+            'area_id' => '地区',
+            'industry' => '行业',
+            'company_name' => '公司名称',
+            'contact_name' => '联系人',
+            'phone' => '手机号',
+            'email' => '邮箱',
+            'score' => '当前分数',
+            'status' => '状态',
+            'custom_fields.industry' => '自定义字段：行业',
+            'custom_fields.product_line' => '自定义字段：产品线',
+            'behavior.activity_count' => '行为：跟进次数',
+            'behavior.has_follow_up' => '行为：有下次跟进',
+            'behavior.days_since_last_activity' => '行为：距上次跟进天数',
+            'completeness.percent' => '资料完整度',
+        ];
+    }
+
+    public static function operatorOptions(): array
+    {
+        return [
+            'eq' => '等于',
+            'neq' => '不等于',
+            'contains' => '包含',
+            'in' => '属于任一',
+            'not_in' => '不属于',
+            'not_empty' => '已填写',
+            'empty' => '未填写',
+            'gt' => '大于',
+            'gte' => '大于等于',
+            'lt' => '小于',
+            'lte' => '小于等于',
+            'between' => '介于两值之间',
         ];
     }
 }

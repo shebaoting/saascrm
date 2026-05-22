@@ -6,6 +6,8 @@ use App\Filament\Clusters\SalesProcess\Resources\QuoteApprovalRequests\Pages\Man
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\QuoteApprovalRequest;
+use App\Services\Crm\ActivityService;
+use App\Services\Crm\AuditLogService;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -145,6 +147,29 @@ class QuoteApprovalRequestResource extends Resource
 
                         $record->quote()->update(['status' => 'approved']);
 
+                        $quote = $record->quote()->with(['customer', 'contact', 'opportunity'])->first();
+
+                        if ($quote) {
+                            app(ActivityService::class)->recordSystemEvent(
+                                $quote->tenant_id,
+                                '报价审批通过：'.$quote->quote_number,
+                                $record->approval_comment,
+                                [
+                                    'customer' => $quote->customer,
+                                    'contact' => $quote->contact,
+                                    'opportunity' => $quote->opportunity,
+                                ],
+                            );
+
+                            app(AuditLogService::class)->record('quote_approved', $quote, [
+                                'status' => 'pending_approval',
+                            ], [
+                                'status' => 'approved',
+                                'approval_id' => $record->id,
+                                'approver_id' => $record->approver_id,
+                            ]);
+                        }
+
                         Notification::make()->success()->title('报价审批已通过')->send();
                     }),
                 Action::make('reject')
@@ -166,6 +191,29 @@ class QuoteApprovalRequestResource extends Resource
                         ])->save();
 
                         $record->quote()->update(['status' => 'rejected']);
+
+                        $quote = $record->quote()->with(['customer', 'contact', 'opportunity'])->first();
+
+                        if ($quote) {
+                            app(ActivityService::class)->recordSystemEvent(
+                                $quote->tenant_id,
+                                '报价审批拒绝：'.$quote->quote_number,
+                                $record->approval_comment,
+                                [
+                                    'customer' => $quote->customer,
+                                    'contact' => $quote->contact,
+                                    'opportunity' => $quote->opportunity,
+                                ],
+                            );
+
+                            app(AuditLogService::class)->record('quote_rejected', $quote, [
+                                'status' => 'pending_approval',
+                            ], [
+                                'status' => 'rejected',
+                                'approval_id' => $record->id,
+                                'approver_id' => $record->approver_id,
+                            ]);
+                        }
 
                         Notification::make()->success()->title('报价审批已拒绝')->send();
                     }),

@@ -4,9 +4,12 @@ namespace App\Filament\Clusters\LeadCenter\Resources\AssignmentRules;
 
 use App\Filament\Clusters\LeadCenter\LeadCenterCluster;
 use App\Filament\Clusters\LeadCenter\Resources\AssignmentRules\Pages\ManageAssignmentRules;
+use App\Filament\Clusters\LeadCenter\Resources\LeadScoreRules\LeadScoreRuleResource;
 use App\Filament\Concerns\UsesCrmAccess;
 use App\Models\AssignmentRule;
+use App\Models\Department;
 use App\Models\User;
+use App\Support\CrmAccess;
 use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -14,7 +17,9 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
@@ -44,7 +49,7 @@ class AssignmentRuleResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
 
     protected static ?string $cluster = LeadCenterCluster::class;
 
@@ -65,12 +70,38 @@ class AssignmentRuleResource extends Resource
                     ->required()
                     ->default('round_robin'),
                 Select::make('department_id')
-                    ->relationship('department', 'name'),
+                    ->options(fn (): array => Department::query()
+                        ->where('tenant_id', CrmAccess::tenantId())
+                        ->orderBy('sort_order')
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all()),
                 Select::make('user_ids')
                     ->multiple()
-                    ->options(fn (): array => User::query()->orderBy('name')->pluck('name', 'id')->all()),
+                    ->options(fn (): array => User::query()
+                        ->whereHas('tenants', fn ($query) => $query->whereKey(CrmAccess::tenantId()))
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all()),
                 TextInput::make('max_per_user_daily')
                     ->numeric(),
+                Repeater::make('conditions')
+                    ->relationship('conditions')
+                    ->schema([
+                        Select::make('field')
+                            ->options(LeadScoreRuleResource::fieldOptions())
+                            ->searchable()
+                            ->required(),
+                        Select::make('operator')
+                            ->options(LeadScoreRuleResource::operatorOptions())
+                            ->required(),
+                        TagsInput::make('value')
+                            ->separator(',')
+                            ->placeholder('可填多个值'),
+                    ])
+                    ->columns(3)
+                    ->columnSpanFull()
+                    ->addActionLabel('添加条件'),
                 TextInput::make('priority')
                     ->required()
                     ->numeric()
@@ -98,6 +129,9 @@ class AssignmentRuleResource extends Resource
                 TextEntry::make('max_per_user_daily')
                     ->numeric()
                     ->placeholder('-'),
+                TextEntry::make('conditions_count')
+                    ->state(fn (AssignmentRule $record): int => $record->conditions()->count())
+                    ->label('条件数'),
                 TextEntry::make('priority')
                     ->numeric(),
                 IconEntry::make('is_active')
@@ -128,6 +162,10 @@ class AssignmentRuleResource extends Resource
                     ->searchable(),
                 TextColumn::make('max_per_user_daily')
                     ->numeric()
+                    ->sortable(),
+                TextColumn::make('conditions_count')
+                    ->counts('conditions')
+                    ->label('条件数')
                     ->sortable(),
                 TextColumn::make('priority')
                     ->numeric()

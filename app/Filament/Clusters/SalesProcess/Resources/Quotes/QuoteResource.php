@@ -10,6 +10,8 @@ use App\Models\Notification as CrmNotification;
 use App\Models\Quote;
 use App\Models\QuoteApprovalRequest;
 use App\Models\User;
+use App\Services\Crm\ActivityService;
+use App\Services\Crm\AuditLogService;
 use App\Services\Crm\QuoteCalculatorService;
 use App\Services\Crm\QuotePdfService;
 use App\Services\Crm\QuoteToOrderService;
@@ -23,8 +25,6 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
@@ -367,6 +367,8 @@ class QuoteResource extends Resource
                             'requested_at' => now(),
                         ]);
 
+                        $previousStatus = $record->status;
+
                         $record->forceFill(['status' => 'pending_approval'])->save();
 
                         if ($approval->approver_id) {
@@ -386,6 +388,25 @@ class QuoteResource extends Resource
                                 'updated_at' => now(),
                             ]);
                         }
+
+                        app(ActivityService::class)->recordSystemEvent(
+                            $record->tenant_id,
+                            '报价提交审批：'.$record->quote_number,
+                            $approval->reason,
+                            [
+                                'customer' => $record->customer,
+                                'contact' => $record->contact,
+                                'opportunity' => $record->opportunity,
+                            ],
+                        );
+
+                        app(AuditLogService::class)->record('quote_approval_requested', $record, [
+                            'status' => $previousStatus,
+                        ], [
+                            'status' => 'pending_approval',
+                            'approval_id' => $approval->id,
+                            'approver_id' => $approval->approver_id,
+                        ]);
 
                         Notification::make()->success()->title('报价已提交审批')->send();
                     }),
@@ -408,7 +429,7 @@ class QuoteResource extends Resource
                                 'approved_at' => now(),
                             ])->save();
                         } else {
-                            QuoteApprovalRequest::create([
+                            $approval = QuoteApprovalRequest::create([
                                 'tenant_id' => $record->tenant_id,
                                 'quote_id' => $record->id,
                                 'requested_by' => $record->user_id ?: auth()->id(),
@@ -419,7 +440,27 @@ class QuoteResource extends Resource
                             ]);
                         }
 
+                        $previousStatus = $record->status;
+
                         $record->forceFill(['status' => 'approved'])->save();
+
+                        app(ActivityService::class)->recordSystemEvent(
+                            $record->tenant_id,
+                            '报价审批通过：'.$record->quote_number,
+                            null,
+                            [
+                                'customer' => $record->customer,
+                                'contact' => $record->contact,
+                                'opportunity' => $record->opportunity,
+                            ],
+                        );
+
+                        app(AuditLogService::class)->record('quote_approved', $record, [
+                            'status' => $previousStatus,
+                        ], [
+                            'status' => 'approved',
+                            'approval_id' => $approval?->id,
+                        ]);
 
                         Notification::make()->success()->title('报价已批准')->send();
                     }),
@@ -453,13 +494,11 @@ class QuoteResource extends Resource
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
-                ForceDeleteAction::make(),
                 RestoreAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),
             ]);
