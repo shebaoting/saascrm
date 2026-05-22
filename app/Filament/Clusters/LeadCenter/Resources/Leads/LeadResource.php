@@ -65,10 +65,6 @@ class LeadResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('lead_number')
-                    ->label('线索编号')
-                    ->disabled()
-                    ->dehydrated(false),
                 TextInput::make('company_name'),
                 TextInput::make('contact_name'),
                 TextInput::make('phone')
@@ -88,20 +84,8 @@ class LeadResource extends Resource
                     ->default('new'),
                 Select::make('qualification_status')
                     ->options(CrmUi::options('lead.qualification_status')),
-                TextInput::make('score')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
                 Select::make('owner_user_id')
                     ->relationship('owner', 'name'),
-                DateTimePicker::make('pool_entered_at'),
-                DateTimePicker::make('last_activity_at'),
-                DateTimePicker::make('next_activity_at'),
-                Select::make('converted_customer_id')
-                    ->relationship('convertedCustomer', 'name'),
-                DateTimePicker::make('converted_at'),
-                Select::make('converted_by')
-                    ->relationship('convertedBy', 'name'),
                 TextInput::make('lost_reason'),
                 ...CustomFieldUi::formSections('lead'),
             ]);

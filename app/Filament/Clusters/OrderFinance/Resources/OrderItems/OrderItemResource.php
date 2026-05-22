@@ -58,9 +58,6 @@ class OrderItemResource extends Resource
                     ->required(),
                 Select::make('product_sku_id')
                     ->relationship('sku', 'sku_code'),
-                TextInput::make('product_name')
-                    ->required(),
-                TextInput::make('sku_code'),
                 KeyValue::make('specifications')
                     ->columnSpanFull(),
                 TextInput::make('quantity')
@@ -78,10 +75,6 @@ class OrderItemResource extends Resource
                     ->default(0)
                     ->prefix('$'),
                 TextInput::make('tax_rate')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('subtotal_amount')
                     ->required()
                     ->numeric()
                     ->default(0),

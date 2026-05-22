@@ -71,24 +71,6 @@ class TenantInvitationResource extends Resource
                         ->orderBy('name')
                         ->pluck('name', 'id')
                         ->all()),
-                TextInput::make('token')
-                    ->disabled()
-                    ->dehydrated(false)
-                    ->placeholder('保存后自动生成'),
-                Select::make('status')
-                    ->options([
-                        'pending' => '待接受',
-                        'accepted' => '已接受',
-                        'expired' => '已过期',
-                        'cancelled' => '已取消',
-                    ])
-                    ->required()
-                    ->default('pending'),
-                Select::make('invited_by')
-                    ->relationship('inviter', 'name')
-                    ->default(fn (): ?int => auth()->id())
-                    ->required(),
-                DateTimePicker::make('accepted_at'),
                 DateTimePicker::make('expires_at')
                     ->default(fn () => now()->addDays(7)),
             ]);

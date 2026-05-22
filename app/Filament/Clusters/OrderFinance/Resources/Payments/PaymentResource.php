@@ -73,7 +73,6 @@ class PaymentResource extends Resource
                             $plan->id => $plan->plan_date?->format('Y-m-d').' / ¥'.number_format((float) $plan->plan_amount, 2),
                         ])
                         ->all()),
-                DatePicker::make('plan_date'),
                 DateTimePicker::make('received_at'),
                 TextInput::make('amount')
                     ->required()

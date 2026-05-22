@@ -143,7 +143,6 @@ class AutomationRuleResource extends Resource
                 Toggle::make('is_active')
                     ->default(true)
                     ->required(),
-                DateTimePicker::make('last_run_at'),
             ]);
     }
 

@@ -69,9 +69,6 @@ class OrderResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('order_number')
-                    ->default(fn (): string => 'SO'.now()->format('YmdHis'))
-                    ->required(),
                 Select::make('customer_id')
                     ->relationship('customer', 'name')
                     ->live()
@@ -120,24 +117,7 @@ class OrderResource extends Resource
                     ->columns(3)
                     ->columnSpanFull()
                     ->addActionLabel('添加订单明细'),
-                TextInput::make('subtotal_amount')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
                 TextInput::make('discount_amount')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('total_amount')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('total_cost')
-                    ->required()
-                    ->numeric()
-                    ->default(0)
-                    ->prefix('¥'),
-                TextInput::make('gross_profit')
                     ->required()
                     ->numeric()
                     ->default(0),
@@ -149,10 +129,6 @@ class OrderResource extends Resource
                     ->options(CrmUi::options('order.order_status'))
                     ->required()
                     ->default('draft'),
-                Select::make('payment_status')
-                    ->options(CrmUi::options('payment_status'))
-                    ->required()
-                    ->default('unpaid'),
                 Repeater::make('paymentPlans')
                     ->label('收款计划')
                     ->relationship('paymentPlans')
@@ -164,13 +140,9 @@ class OrderResource extends Resource
                             ->numeric()
                             ->default(0)
                             ->prefix('¥'),
-                        Select::make('status')
-                            ->options(CrmUi::options('payment_plan.status'))
-                            ->default('pending')
-                            ->required(),
                         TextInput::make('notes'),
                     ])
-                    ->columns(4)
+                    ->columns(3)
                     ->columnSpanFull()
                     ->addActionLabel('添加收款计划'),
                 Repeater::make('attachments')
@@ -198,7 +170,6 @@ class OrderResource extends Resource
                     ->addActionLabel('添加合同/凭证'),
                 DateTimePicker::make('ordered_at')
                     ->required(),
-                DateTimePicker::make('completed_at'),
                 Textarea::make('notes')
                     ->columnSpanFull(),
                 ...CustomFieldUi::formSections('order'),

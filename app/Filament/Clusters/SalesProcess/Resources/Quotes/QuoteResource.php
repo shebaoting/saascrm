@@ -76,17 +76,6 @@ class QuoteResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('quote_number')
-                    ->default(fn (): string => 'QT'.now()->format('YmdHis'))
-                    ->required(),
-                TextInput::make('version')
-                    ->required()
-                    ->numeric()
-                    ->default(1),
-                Select::make('source_quote_id')
-                    ->relationship('sourceQuote', 'quote_number')
-                    ->disabled()
-                    ->dehydrated(false),
                 TextInput::make('title')
                     ->required(),
                 Select::make('customer_id')
@@ -142,45 +131,14 @@ class QuoteResource extends Resource
                     ->columns(4)
                     ->columnSpanFull()
                     ->addActionLabel('添加报价明细'),
-                TextInput::make('subtotal_amount')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
                 TextInput::make('discount_amount')
                     ->required()
                     ->numeric()
                     ->default(0),
-                TextInput::make('total_amount')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('total_cost')
-                    ->required()
-                    ->numeric()
-                    ->default(0)
-                    ->prefix('¥'),
-                TextInput::make('total_profit')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('total_tax')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                TextInput::make('profit_margin')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                Select::make('status')
-                    ->options(CrmUi::options('quote.status'))
-                    ->required()
-                    ->default('draft'),
                 DatePicker::make('valid_until'),
                 Textarea::make('notes')
                     ->columnSpanFull(),
                 ...CustomFieldUi::formSections('quote'),
-                TextInput::make('pdf_path'),
-                DateTimePicker::make('accepted_at'),
             ]);
     }
 

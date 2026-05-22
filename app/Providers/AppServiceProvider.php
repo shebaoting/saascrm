@@ -17,9 +17,11 @@ use App\Models\OrderItem;
 use App\Models\OrderPaymentPlan;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\PipelineStage;
 use App\Models\Quote;
 use App\Models\QuoteApprovalRequest;
 use App\Models\QuoteItem;
+use App\Models\Task;
 use App\Models\TenantInvitation;
 use App\Services\Crm\ActivityService;
 use App\Services\Crm\AutomationService;
@@ -96,6 +98,12 @@ class AppServiceProvider extends ServiceProvider
             $order->ordered_at = $order->ordered_at ?: now();
         });
 
+        Order::saving(function (Order $order): void {
+            if ($order->order_status === 'completed' && blank($order->completed_at)) {
+                $order->completed_at = now();
+            }
+        });
+
         Order::updated(function (Order $order): void {
             if ($order->wasChanged('order_status') && $order->order_status === 'completed') {
                 app(AutomationService::class)->run('order_completed', $order);
@@ -139,6 +147,44 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Contact::saving(fn (Contact $contact): bool => $this->normalizeContactFields($contact));
+
+        Opportunity::saving(function (Opportunity $opportunity): void {
+            if (! $opportunity->pipeline_stage_id || ($opportunity->exists && ! $opportunity->isDirty('pipeline_stage_id'))) {
+                return;
+            }
+
+            $stage = PipelineStage::query()
+                ->where('tenant_id', $opportunity->tenant_id)
+                ->whereKey($opportunity->pipeline_stage_id)
+                ->first();
+
+            if (! $stage) {
+                return;
+            }
+
+            $opportunity->pipeline_id = $stage->pipeline_id;
+            $opportunity->probability = $stage->probability;
+
+            if ($stage->stage_type === 'won') {
+                $opportunity->closed_at = $opportunity->closed_at ?: now();
+                $opportunity->ended_at = $opportunity->ended_at ?: now();
+                $opportunity->closed_amount = $opportunity->closed_amount ?: $opportunity->amount;
+                $opportunity->forecast_category = 'closed';
+            } elseif (in_array($stage->stage_type, ['lost', 'invalid'], true)) {
+                $opportunity->ended_at = $opportunity->ended_at ?: now();
+            }
+        });
+
+        Task::creating(function (Task $task): void {
+            $task->creator_id = $task->creator_id ?: Auth::id();
+            $task->assignee_id = $task->assignee_id ?: Auth::id() ?: $task->creator_id;
+        });
+
+        Task::saving(function (Task $task): void {
+            if ($task->status === 'completed' && blank($task->completed_at)) {
+                $task->completed_at = now();
+            }
+        });
 
         Attachment::creating(function (Attachment $attachment): void {
             if ($attachment->tenant && $attachment->size) {

@@ -94,12 +94,6 @@ class OpportunityResource extends Resource
                     ->required()
                     ->numeric()
                     ->default(0),
-                TextInput::make('closed_amount')
-                    ->numeric(),
-                TextInput::make('probability')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
                 Select::make('forecast_category')
                     ->options(CrmUi::options('forecast_category'))
                     ->required()
@@ -107,8 +101,6 @@ class OpportunityResource extends Resource
                 DatePicker::make('expected_close_date'),
                 Select::make('responsible_user_id')
                     ->relationship('responsible', 'name'),
-                DateTimePicker::make('closed_at'),
-                DateTimePicker::make('ended_at'),
                 TextInput::make('lost_reason'),
                 TextInput::make('lost_remarks'),
                 TextInput::make('invalid_reason'),

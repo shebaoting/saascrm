@@ -71,9 +71,6 @@ class OrderExpenseResource extends Resource
                     ->options(CrmUi::options('order_expense.status'))
                     ->required()
                     ->default('pending'),
-                Select::make('approved_by')
-                    ->relationship('approvedBy', 'name'),
-                DateTimePicker::make('approved_at'),
             ]);
     }
 

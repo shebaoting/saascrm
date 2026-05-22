@@ -49,6 +49,11 @@ class QuoteApprovalRequestResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'status';
 
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema
@@ -56,22 +61,10 @@ class QuoteApprovalRequestResource extends Resource
                 Select::make('quote_id')
                     ->relationship('quote', 'title')
                     ->required(),
-                Select::make('requested_by')
-                    ->relationship('requester', 'name')
-                    ->default(fn (): ?int => auth()->id())
-                    ->required(),
                 Select::make('approver_id')
                     ->relationship('approver', 'name'),
-                Select::make('status')
-                    ->options(CrmUi::options('quote_approval.status'))
-                    ->required()
-                    ->default('pending'),
                 TextInput::make('reason'),
                 TextInput::make('approval_comment'),
-                DateTimePicker::make('requested_at')
-                    ->required(),
-                DateTimePicker::make('approved_at'),
-                DateTimePicker::make('rejected_at'),
             ]);
     }
 
@@ -218,14 +211,8 @@ class QuoteApprovalRequestResource extends Resource
                         Notification::make()->success()->title('报价审批已拒绝')->send();
                     }),
                 ViewAction::make(),
-                EditAction::make(),
-                DeleteAction::make(),
             ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+            ->toolbarActions([]);
     }
 
     public static function getPages(): array

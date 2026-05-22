@@ -72,11 +72,6 @@ class TaskResource extends Resource
                     ->columnSpanFull(),
                 DateTimePicker::make('start_at'),
                 DateTimePicker::make('due_at'),
-                DateTimePicker::make('completed_at'),
-                Select::make('creator_id')
-                    ->relationship('creator', 'name')
-                    ->default(fn (): ?int => auth()->id())
-                    ->required(),
                 Select::make('assignee_id')
                     ->relationship('assignee', 'name')
                     ->default(fn (): ?int => auth()->id())

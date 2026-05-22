@@ -67,7 +67,6 @@ class CustomerResource extends Resource
             ->components([
                 Section::make('基础信息')
                     ->schema([
-                        CustomFieldUi::applyLayout(TextInput::make('customer_number')->label('客户编号')->disabled()->dehydrated(false), 'customer', 'customer_number'),
                         CustomFieldUi::applyLayout(TextInput::make('name')->required(), 'customer', 'name'),
                         CustomFieldUi::applyLayout(TextInput::make('short_name'), 'customer', 'short_name'),
                         CustomFieldUi::applyLayout(Select::make('customer_type')->options(CrmUi::options('customer.customer_type'))->required()->default('company'), 'customer', 'customer_type'),
@@ -89,21 +88,11 @@ class CustomerResource extends Resource
                     ])
                     ->columns(2)
                     ->columnSpanFull(),
-                Section::make('跟进信息')
-                    ->schema([
-                        CustomFieldUi::applyLayout(DateTimePicker::make('pool_entered_at'), 'customer', 'pool_entered_at'),
-                        CustomFieldUi::applyLayout(DateTimePicker::make('last_activity_at'), 'customer', 'last_activity_at'),
-                        CustomFieldUi::applyLayout(DateTimePicker::make('next_activity_at'), 'customer', 'next_activity_at'),
-                    ])
-                    ->columns(3)
-                    ->columnSpanFull(),
                 Section::make('财务信息')
                     ->schema([
                         CustomFieldUi::applyLayout(TextInput::make('industry'), 'customer', 'industry'),
                         CustomFieldUi::applyLayout(TextInput::make('company_size'), 'customer', 'company_size'),
                         CustomFieldUi::applyLayout(TextInput::make('annual_revenue')->numeric(), 'customer', 'annual_revenue'),
-                        CustomFieldUi::applyLayout(DateTimePicker::make('first_order_at'), 'customer', 'first_order_at'),
-                        CustomFieldUi::applyLayout(DateTimePicker::make('last_order_at'), 'customer', 'last_order_at'),
                     ])
                     ->columns(3)
                     ->columnSpanFull(),
