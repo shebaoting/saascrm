@@ -5,6 +5,7 @@ namespace App\Filament\Platform\Clusters\TenantManagement\Resources\Users;
 use App\Filament\Platform\Clusters\TenantManagement\Resources\Users\Pages\ManageUsers;
 use App\Filament\Platform\Clusters\TenantManagement\TenantManagementCluster;
 use App\Models\User;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -12,6 +13,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
@@ -50,7 +52,7 @@ class UserResource extends Resource
                 TextInput::make('name')
                     ->required(),
                 TextInput::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->email()
                     ->required(),
                 DateTimePicker::make('email_verified_at'),
@@ -60,7 +62,8 @@ class UserResource extends Resource
                 TextInput::make('phone')
                     ->tel(),
                 TextInput::make('avatar'),
-                TextInput::make('gender'),
+                Select::make('gender')
+                    ->options(CrmUi::options('gender')),
                 TextInput::make('position'),
                 TextInput::make('telephone')
                     ->tel(),
@@ -81,7 +84,7 @@ class UserResource extends Resource
             ->components([
                 TextEntry::make('name'),
                 TextEntry::make('email')
-                    ->label('Email address'),
+                    ->label('邮箱'),
                 TextEntry::make('email_verified_at')
                     ->dateTime()
                     ->placeholder('-'),
@@ -120,7 +123,7 @@ class UserResource extends Resource
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->searchable(),
                 TextColumn::make('email_verified_at')
                     ->dateTime()

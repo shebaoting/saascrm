@@ -87,7 +87,7 @@ class ProductResource extends Resource
                     ->visible(fn (Product $record): bool => $record->trashed()),
                 TextEntry::make('name'),
                 TextEntry::make('group.name')
-                    ->label('Group')
+                    ->label('分组')
                     ->placeholder('-'),
                 TextEntry::make('tax_rate')
                     ->numeric(),

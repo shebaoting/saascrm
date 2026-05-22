@@ -5,6 +5,7 @@ namespace App\Filament\Clusters\SalesProcess\Resources\QuoteApprovalRequests;
 use App\Filament\Clusters\SalesProcess\Resources\QuoteApprovalRequests\Pages\ManageQuoteApprovalRequests;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
 use App\Models\QuoteApprovalRequest;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -48,12 +49,14 @@ class QuoteApprovalRequestResource extends Resource
                 Select::make('quote_id')
                     ->relationship('quote', 'title')
                     ->required(),
-                TextInput::make('requested_by')
-                    ->required()
-                    ->numeric(),
+                Select::make('requested_by')
+                    ->relationship('requester', 'name')
+                    ->default(fn (): ?int => auth()->id())
+                    ->required(),
                 Select::make('approver_id')
                     ->relationship('approver', 'name'),
-                TextInput::make('status')
+                Select::make('status')
+                    ->options(CrmUi::options('quote_approval.status'))
                     ->required()
                     ->default('pending'),
                 TextInput::make('reason'),
@@ -70,11 +73,10 @@ class QuoteApprovalRequestResource extends Resource
         return $schema
             ->components([
                 TextEntry::make('quote.title')
-                    ->label('Quote'),
-                TextEntry::make('requested_by')
-                    ->numeric(),
+                    ->label('报价单'),
+                TextEntry::make('requester.name'),
                 TextEntry::make('approver.name')
-                    ->label('Approver')
+                    ->label('审批人')
                     ->placeholder('-'),
                 TextEntry::make('status'),
                 TextEntry::make('reason')
@@ -99,9 +101,8 @@ class QuoteApprovalRequestResource extends Resource
             ->columns([
                 TextColumn::make('quote.title')
                     ->searchable(),
-                TextColumn::make('requested_by')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('requester.name')
+                    ->searchable(),
                 TextColumn::make('approver.name')
                     ->searchable(),
                 TextColumn::make('status')

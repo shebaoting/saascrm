@@ -66,7 +66,7 @@ class NotificationResource extends Resource
         return $schema
             ->components([
                 TextEntry::make('id')
-                    ->label('ID'),
+                    ->label('编号'),
                 TextEntry::make('tenant_id')
                     ->numeric()
                     ->placeholder('-'),
@@ -94,7 +94,7 @@ class NotificationResource extends Resource
             ->recordTitleAttribute('type')
             ->columns([
                 TextColumn::make('id')
-                    ->label('ID'),
+                    ->label('编号'),
                 TextColumn::make('tenant_id')
                     ->numeric()
                     ->sortable(),

@@ -15,6 +15,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -42,6 +43,8 @@ class AttachmentResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $cluster = SystemSettingsCluster::class;
 
     protected static ?string $recordTitleAttribute = 'name';
@@ -55,9 +58,9 @@ class AttachmentResource extends Resource
                 TextInput::make('disk')
                     ->required()
                     ->default('local'),
-                TextInput::make('user_id')
-                    ->required()
-                    ->numeric(),
+                Select::make('user_id')
+                    ->relationship('user', 'name')
+                    ->required(),
                 TextInput::make('model_type')
                     ->required(),
                 TextInput::make('model_id')
@@ -90,8 +93,7 @@ class AttachmentResource extends Resource
                     ->visible(fn (Attachment $record): bool => $record->trashed()),
                 TextEntry::make('path'),
                 TextEntry::make('disk'),
-                TextEntry::make('user_id')
-                    ->numeric(),
+                TextEntry::make('user.name'),
                 TextEntry::make('model_type'),
                 TextEntry::make('model_id')
                     ->numeric(),
@@ -130,9 +132,8 @@ class AttachmentResource extends Resource
                     ->searchable(),
                 TextColumn::make('disk')
                     ->searchable(),
-                TextColumn::make('user_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('user.name')
+                    ->searchable(),
                 TextColumn::make('model_type')
                     ->searchable(),
                 TextColumn::make('model_id')

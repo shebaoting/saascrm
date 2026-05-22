@@ -5,6 +5,7 @@ namespace App\Filament\Platform\Clusters\SubscriptionBilling\Resources\TenantSub
 use App\Filament\Platform\Clusters\SubscriptionBilling\Resources\TenantSubscriptions\Pages\ManageTenantSubscriptions;
 use App\Filament\Platform\Clusters\SubscriptionBilling\SubscriptionBillingCluster;
 use App\Models\TenantSubscription;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -51,10 +52,12 @@ class TenantSubscriptionResource extends Resource
                 Select::make('plan_id')
                     ->relationship('plan', 'name')
                     ->required(),
-                TextInput::make('status')
+                Select::make('status')
+                    ->options(CrmUi::options('subscription.status'))
                     ->required()
                     ->default('trialing'),
-                TextInput::make('billing_cycle')
+                Select::make('billing_cycle')
+                    ->options(CrmUi::options('subscription.billing_cycle'))
                     ->required()
                     ->default('manual'),
                 DateTimePicker::make('starts_at')
@@ -70,9 +73,9 @@ class TenantSubscriptionResource extends Resource
         return $schema
             ->components([
                 TextEntry::make('tenant.name')
-                    ->label('Tenant'),
+                    ->label('租户'),
                 TextEntry::make('plan.name')
-                    ->label('Plan'),
+                    ->label('套餐'),
                 TextEntry::make('status'),
                 TextEntry::make('billing_cycle'),
                 TextEntry::make('starts_at')

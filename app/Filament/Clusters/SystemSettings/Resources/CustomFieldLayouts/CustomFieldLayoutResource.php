@@ -36,6 +36,8 @@ class CustomFieldLayoutResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $cluster = SystemSettingsCluster::class;
 
     protected static ?string $recordTitleAttribute = 'model_type';
@@ -65,7 +67,7 @@ class CustomFieldLayoutResource extends Resource
                     ->placeholder('-'),
                 TextEntry::make('model_type'),
                 TextEntry::make('role.name')
-                    ->label('Role')
+                    ->label('角色')
                     ->placeholder('-'),
             ]);
     }

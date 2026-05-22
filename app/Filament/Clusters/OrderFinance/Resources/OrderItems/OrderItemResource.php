@@ -36,6 +36,8 @@ class OrderItemResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $cluster = OrderFinanceCluster::class;
 
     protected static ?string $recordTitleAttribute = 'product_name';
@@ -45,13 +47,13 @@ class OrderItemResource extends Resource
         return $schema
             ->components([
                 Select::make('order_id')
-                    ->relationship('order', 'id')
+                    ->relationship('order', 'order_number')
                     ->required(),
-                TextInput::make('product_id')
-                    ->required()
-                    ->numeric(),
-                TextInput::make('product_sku_id')
-                    ->numeric(),
+                Select::make('product_id')
+                    ->relationship('product', 'name')
+                    ->required(),
+                Select::make('product_sku_id')
+                    ->relationship('sku', 'sku_code'),
                 TextInput::make('product_name')
                     ->required(),
                 TextInput::make('sku_code'),
@@ -91,12 +93,10 @@ class OrderItemResource extends Resource
                 TextEntry::make('updated_at')
                     ->dateTime()
                     ->placeholder('-'),
-                TextEntry::make('order.id')
-                    ->label('Order'),
-                TextEntry::make('product_id')
-                    ->numeric(),
-                TextEntry::make('product_sku_id')
-                    ->numeric()
+                TextEntry::make('order.order_number')
+                    ->label('订单'),
+                TextEntry::make('product.name'),
+                TextEntry::make('sku.sku_code')
                     ->placeholder('-'),
                 TextEntry::make('product_name'),
                 TextEntry::make('sku_code')
@@ -127,14 +127,12 @@ class OrderItemResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('order.id')
+                TextColumn::make('order.order_number')
                     ->searchable(),
-                TextColumn::make('product_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('product_sku_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('product.name')
+                    ->searchable(),
+                TextColumn::make('sku.sku_code')
+                    ->searchable(),
                 TextColumn::make('product_name')
                     ->searchable(),
                 TextColumn::make('sku_code')

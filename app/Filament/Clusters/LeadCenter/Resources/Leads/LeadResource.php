@@ -7,6 +7,7 @@ use App\Filament\Clusters\LeadCenter\Resources\Leads\Pages\ManageLeads;
 use App\Models\Lead;
 use App\Services\Crm\LeadAssignmentService;
 use App\Services\Crm\LeadConversionService;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -62,7 +63,7 @@ class LeadResource extends Resource
                 TextInput::make('phone')
                     ->tel(),
                 TextInput::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->email(),
                 TextInput::make('wechat_id'),
                 TextInput::make('country_code'),
@@ -70,24 +71,26 @@ class LeadResource extends Resource
                 TextInput::make('address'),
                 TextInput::make('source'),
                 TextInput::make('tags'),
-                TextInput::make('status')
+                Select::make('status')
+                    ->options(CrmUi::options('lead.status'))
                     ->required()
                     ->default('new'),
-                TextInput::make('qualification_status'),
+                Select::make('qualification_status')
+                    ->options(CrmUi::options('lead.qualification_status')),
                 TextInput::make('score')
                     ->required()
                     ->numeric()
                     ->default(0),
-                TextInput::make('owner_user_id')
-                    ->numeric(),
+                Select::make('owner_user_id')
+                    ->relationship('owner', 'name'),
                 DateTimePicker::make('pool_entered_at'),
                 DateTimePicker::make('last_activity_at'),
                 DateTimePicker::make('next_activity_at'),
                 Select::make('converted_customer_id')
                     ->relationship('convertedCustomer', 'name'),
                 DateTimePicker::make('converted_at'),
-                TextInput::make('converted_by')
-                    ->numeric(),
+                Select::make('converted_by')
+                    ->relationship('convertedBy', 'name'),
                 TextInput::make('lost_reason'),
                 TextInput::make('custom_fields'),
             ]);
@@ -113,7 +116,7 @@ class LeadResource extends Resource
                 TextEntry::make('phone')
                     ->placeholder('-'),
                 TextEntry::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->placeholder('-'),
                 TextEntry::make('wechat_id')
                     ->placeholder('-'),
@@ -130,8 +133,7 @@ class LeadResource extends Resource
                     ->placeholder('-'),
                 TextEntry::make('score')
                     ->numeric(),
-                TextEntry::make('owner_user_id')
-                    ->numeric()
+                TextEntry::make('owner.name')
                     ->placeholder('-'),
                 TextEntry::make('pool_entered_at')
                     ->dateTime()
@@ -143,13 +145,12 @@ class LeadResource extends Resource
                     ->dateTime()
                     ->placeholder('-'),
                 TextEntry::make('convertedCustomer.name')
-                    ->label('Converted customer')
+                    ->label('已转客户')
                     ->placeholder('-'),
                 TextEntry::make('converted_at')
                     ->dateTime()
                     ->placeholder('-'),
-                TextEntry::make('converted_by')
-                    ->numeric()
+                TextEntry::make('convertedBy.name')
                     ->placeholder('-'),
                 TextEntry::make('lost_reason')
                     ->placeholder('-'),
@@ -180,7 +181,7 @@ class LeadResource extends Resource
                 TextColumn::make('phone')
                     ->searchable(),
                 TextColumn::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->searchable(),
                 TextColumn::make('wechat_id')
                     ->searchable(),
@@ -199,9 +200,8 @@ class LeadResource extends Resource
                 TextColumn::make('score')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('owner_user_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('owner.name')
+                    ->searchable(),
                 TextColumn::make('pool_entered_at')
                     ->dateTime()
                     ->sortable(),
@@ -216,9 +216,8 @@ class LeadResource extends Resource
                 TextColumn::make('converted_at')
                     ->dateTime()
                     ->sortable(),
-                TextColumn::make('converted_by')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('convertedBy.name')
+                    ->searchable(),
                 TextColumn::make('lost_reason')
                     ->searchable(),
             ])

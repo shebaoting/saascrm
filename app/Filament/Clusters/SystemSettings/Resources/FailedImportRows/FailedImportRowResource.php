@@ -37,6 +37,8 @@ class FailedImportRowResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $cluster = SystemSettingsCluster::class;
 
     protected static ?string $recordTitleAttribute = 'validation_error';
@@ -46,7 +48,7 @@ class FailedImportRowResource extends Resource
         return $schema
             ->components([
                 Select::make('import_id')
-                    ->relationship('import', 'id')
+                    ->relationship('import', 'file_name')
                     ->required(),
                 TextInput::make('data')
                     ->required(),
@@ -65,8 +67,8 @@ class FailedImportRowResource extends Resource
                 TextEntry::make('updated_at')
                     ->dateTime()
                     ->placeholder('-'),
-                TextEntry::make('import.id')
-                    ->label('Import'),
+                TextEntry::make('import.file_name')
+                    ->label('导入任务'),
                 TextEntry::make('validation_error')
                     ->placeholder('-')
                     ->columnSpanFull(),
@@ -86,7 +88,7 @@ class FailedImportRowResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('import.id')
+                TextColumn::make('import.file_name')
                     ->searchable(),
             ])
             ->filters([

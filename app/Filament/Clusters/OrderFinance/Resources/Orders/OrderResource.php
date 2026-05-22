@@ -6,6 +6,7 @@ use App\Filament\Clusters\OrderFinance\OrderFinanceCluster;
 use App\Filament\Clusters\OrderFinance\Resources\Orders\Pages\ManageOrders;
 use App\Models\Order;
 use App\Services\Crm\OrderFinanceService;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -92,25 +93,16 @@ class OrderResource extends Resource
                     ->required()
                     ->numeric()
                     ->default(0),
-                TextInput::make('order_source')
+                Select::make('order_source')
+                    ->options(CrmUi::options('order.order_source'))
                     ->required()
                     ->default('sales_entry'),
                 Select::make('order_status')
-                    ->options([
-                        'draft' => '草稿',
-                        'confirmed' => '已确认',
-                        'completed' => '已完成',
-                        'cancelled' => '已取消',
-                    ])
+                    ->options(CrmUi::options('order.order_status'))
                     ->required()
                     ->default('draft'),
                 Select::make('payment_status')
-                    ->options([
-                        'unpaid' => '未收款',
-                        'partial_paid' => '部分收款',
-                        'paid' => '已收款',
-                        'refunded' => '已退款',
-                    ])
+                    ->options(CrmUi::options('payment_status'))
                     ->required()
                     ->default('unpaid'),
                 DateTimePicker::make('ordered_at')
@@ -137,18 +129,17 @@ class OrderResource extends Resource
                     ->visible(fn (Order $record): bool => $record->trashed()),
                 TextEntry::make('order_number'),
                 TextEntry::make('customer.name')
-                    ->label('Customer'),
+                    ->label('客户'),
                 TextEntry::make('contact.name')
-                    ->label('Contact')
+                    ->label('联系人')
                     ->placeholder('-'),
                 TextEntry::make('opportunity.name')
-                    ->label('Opportunity')
+                    ->label('商机')
                     ->placeholder('-'),
                 TextEntry::make('quote.title')
-                    ->label('Quote')
+                    ->label('报价单')
                     ->placeholder('-'),
-                TextEntry::make('employee_id')
-                    ->numeric()
+                TextEntry::make('employee.name')
                     ->placeholder('-'),
                 TextEntry::make('subtotal_amount')
                     ->numeric(),
@@ -201,9 +192,8 @@ class OrderResource extends Resource
                     ->searchable(),
                 TextColumn::make('quote.title')
                     ->searchable(),
-                TextColumn::make('employee_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('employee.name')
+                    ->searchable(),
                 TextColumn::make('subtotal_amount')
                     ->numeric()
                     ->sortable(),

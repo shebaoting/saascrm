@@ -45,7 +45,10 @@ class CrmUi
                 $field->label(static::label($field->getName()));
 
                 if ($field instanceof Select) {
-                    $field->searchable()->optionsLimit(50);
+                    $field
+                        ->native(false)
+                        ->searchable()
+                        ->optionsLimit(50);
                 }
             });
         }
@@ -56,6 +59,8 @@ class CrmUi
 
                 if ($entry instanceof TextEntry) {
                     $name = $entry->getName();
+
+                    $entry->placeholder('-');
 
                     if (static::hasValueLabels($name)) {
                         $entry->formatStateUsing(fn ($state, ?Model $record = null) => static::valueLabel($name, $state, $record));
@@ -70,6 +75,8 @@ class CrmUi
 
                 if ($column instanceof TextColumn) {
                     $name = $column->getName();
+
+                    $column->placeholder('-');
 
                     if (static::hasValueLabels($name)) {
                         $column->formatStateUsing(fn ($state, ?Model $record = null) => static::valueLabel($name, $state, $record));
@@ -405,6 +412,24 @@ class CrmUi
                 'least_busy' => '按空闲度分配',
                 'manual' => '手动分配',
             ],
+            'approval.status' => [
+                'pending' => '待审批',
+                'approved' => '已通过',
+                'rejected' => '已拒绝',
+            ],
+            'automation.action_type' => [
+                'create_task' => '创建任务',
+                'send_notification' => '发送通知',
+                'assign_owner' => '分配负责人',
+                'update_field' => '更新字段',
+            ],
+            'automation.trigger_type' => [
+                'lead_created' => '线索创建',
+                'customer_created' => '客户创建',
+                'opportunity_stage_changed' => '商机阶段变更',
+                'quote_approved' => '报价审批通过',
+                'order_completed' => '订单完成',
+            ],
             'customer.customer_type' => [
                 'company' => '企业客户',
                 'individual' => '个人客户',
@@ -427,10 +452,10 @@ class CrmUi
                 'boolean' => '开关',
             ],
             'forecast_category' => [
-                'pipeline' => 'Pipeline',
-                'best_case' => 'Best Case',
-                'commit' => 'Commit',
-                'closed' => 'Closed',
+                'pipeline' => '管道预测',
+                'best_case' => '最佳情况',
+                'commit' => '承诺成交',
+                'closed' => '已成交',
             ],
             'gender' => [
                 'male' => '男',
@@ -452,6 +477,17 @@ class CrmUi
                 'converted' => '已转客户',
                 'lost' => '已流失',
             ],
+            'kb.status' => [
+                'draft' => '草稿',
+                'published' => '已发布',
+                'archived' => '已归档',
+            ],
+            'pool.action' => [
+                'claim' => '领取',
+                'release' => '释放',
+                'transfer' => '转移',
+                'auto_recycle' => '自动回收',
+            ],
             'order.order_source' => [
                 'sales_entry' => '销售录入',
                 'quote' => '报价转订单',
@@ -463,6 +499,11 @@ class CrmUi
                 'processing' => '处理中',
                 'completed' => '已完成',
                 'cancelled' => '已取消',
+            ],
+            'order_expense.status' => [
+                'pending' => '待审批',
+                'approved' => '已通过',
+                'rejected' => '已拒绝',
             ],
             'payment.method' => [
                 'bank_transfer' => '银行转账',
@@ -480,6 +521,7 @@ class CrmUi
             ],
             'payment_status' => [
                 'unpaid' => '未收款',
+                'partial_paid' => '部分收款',
                 'partial' => '部分收款',
                 'paid' => '已收款',
                 'refunded' => '已退款',
@@ -498,6 +540,7 @@ class CrmUi
             ],
             'quote.status' => [
                 'draft' => '草稿',
+                'pending_approval' => '待审批',
                 'sent' => '已发送',
                 'approved' => '已审批',
                 'accepted' => '已接受',
@@ -531,12 +574,28 @@ class CrmUi
                 'not_started' => '未开始',
                 'in_progress' => '进行中',
                 'completed' => '已完成',
+                'ignored' => '已忽略',
                 'cancelled' => '已取消',
+            ],
+            'target_type' => [
+                'lead' => '线索',
+                'customer' => '客户',
+                'contact' => '联系人',
+                'opportunity' => '商机',
+                'user' => '员工',
+                'department' => '部门',
+                'tenant' => '全公司',
             ],
             'tenant.status' => [
                 'trial' => '试用中',
                 'active' => '有效',
                 'suspended' => '已停用',
+            ],
+            'tenant_invitation.status' => [
+                'pending' => '待接受',
+                'accepted' => '已接受',
+                'expired' => '已过期',
+                'cancelled' => '已取消',
             ],
         ][$key] ?? [];
     }
@@ -545,6 +604,7 @@ class CrmUi
     {
         return in_array(Str::afterLast($name, '.'), [
             'action',
+            'action_type',
             'billing_cycle',
             'customer_type',
             'direction',
@@ -552,6 +612,7 @@ class CrmUi
             'gender',
             'lifecycle_stage',
             'method',
+            'model_type',
             'order_source',
             'order_status',
             'payment_method',
@@ -596,11 +657,14 @@ class CrmUi
                 'Activity.type' => 'activity.type',
                 'Activity.direction' => 'activity.direction',
                 'AssignmentRule.method' => 'assignment.method',
+                'AutomationAction.action_type' => 'automation.action_type',
+                'AutomationRule.trigger_type' => 'automation.trigger_type',
                 'Customer.customer_type' => 'customer.customer_type',
                 'Customer.lifecycle_stage' => 'customer.lifecycle_stage',
                 'CustomField.type' => 'custom_field.type',
                 'Lead.status' => 'lead.status',
                 'Lead.qualification_status' => 'lead.qualification_status',
+                'KbArticle.status' => 'kb.status',
                 'Opportunity.forecast_category' => 'forecast_category',
                 'Order.order_source' => 'order.order_source',
                 'Order.order_status' => 'order.order_status',
@@ -610,11 +674,14 @@ class CrmUi
                 'PipelineStage.stage_type' => 'pipeline.stage_type',
                 'Quote.status' => 'quote.status',
                 'QuoteApprovalRequest.status' => 'quote_approval.status',
+                'OrderExpense.status' => 'order_expense.status',
                 'Task.priority' => 'task.priority',
                 'Task.status' => 'task.status',
                 'Tenant.status' => 'tenant.status',
+                'TenantInvitation.status' => 'tenant_invitation.status',
                 'TenantSubscription.status' => 'subscription.status',
                 'TenantSubscription.billing_cycle' => 'subscription.billing_cycle',
+                'CustomerPoolHistory.action' => 'pool.action',
                 default => null,
             },
             match ($field) {
@@ -622,6 +689,8 @@ class CrmUi
                 'gender' => 'gender',
                 'payment_status' => 'payment_status',
                 'period_type' => 'period_type',
+                'model_type' => 'target_type',
+                'target_type' => 'target_type',
                 default => null,
             },
         ]));

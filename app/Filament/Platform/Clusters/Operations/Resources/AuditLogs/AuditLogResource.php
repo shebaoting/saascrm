@@ -65,10 +65,10 @@ class AuditLogResource extends Resource
         return $schema
             ->components([
                 TextEntry::make('tenant.name')
-                    ->label('Tenant')
+                    ->label('租户')
                     ->placeholder('-'),
                 TextEntry::make('user.name')
-                    ->label('User')
+                    ->label('用户')
                     ->placeholder('-'),
                 TextEntry::make('action'),
                 TextEntry::make('model_type')

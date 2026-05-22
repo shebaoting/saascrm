@@ -35,6 +35,8 @@ class SettingResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $cluster = SystemSettingsCluster::class;
 
     protected static ?string $recordTitleAttribute = 'key';
@@ -54,7 +56,7 @@ class SettingResource extends Resource
         return $schema
             ->components([
                 TextEntry::make('tenant.name')
-                    ->label('Tenant')
+                    ->label('租户')
                     ->placeholder('-'),
                 TextEntry::make('key'),
                 TextEntry::make('created_at')

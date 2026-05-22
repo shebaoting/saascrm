@@ -4,6 +4,8 @@ namespace App\Filament\Clusters\SystemSettings\Resources\TenantInvitations;
 
 use App\Filament\Clusters\SystemSettings\Resources\TenantInvitations\Pages\ManageTenantInvitations;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
+use App\Models\Department;
+use App\Models\Role;
 use App\Models\TenantInvitation;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
@@ -12,6 +14,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -45,20 +48,31 @@ class TenantInvitationResource extends Resource
         return $schema
             ->components([
                 TextInput::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->email(),
                 TextInput::make('phone')
                     ->tel(),
-                TextInput::make('role_ids'),
-                TextInput::make('department_ids'),
+                Select::make('role_ids')
+                    ->multiple()
+                    ->options(fn (): array => Role::query()->orderBy('name')->pluck('name', 'id')->all()),
+                Select::make('department_ids')
+                    ->multiple()
+                    ->options(fn (): array => Department::query()->orderBy('name')->pluck('name', 'id')->all()),
                 TextInput::make('token')
                     ->required(),
-                TextInput::make('status')
+                Select::make('status')
+                    ->options([
+                        'pending' => '待接受',
+                        'accepted' => '已接受',
+                        'expired' => '已过期',
+                        'cancelled' => '已取消',
+                    ])
                     ->required()
                     ->default('pending'),
-                TextInput::make('invited_by')
-                    ->required()
-                    ->numeric(),
+                Select::make('invited_by')
+                    ->relationship('inviter', 'name')
+                    ->default(fn (): ?int => auth()->id())
+                    ->required(),
                 DateTimePicker::make('accepted_at'),
                 DateTimePicker::make('expires_at')
                     ->required(),
@@ -70,14 +84,13 @@ class TenantInvitationResource extends Resource
         return $schema
             ->components([
                 TextEntry::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->placeholder('-'),
                 TextEntry::make('phone')
                     ->placeholder('-'),
                 TextEntry::make('token'),
                 TextEntry::make('status'),
-                TextEntry::make('invited_by')
-                    ->numeric(),
+                TextEntry::make('inviter.name'),
                 TextEntry::make('accepted_at')
                     ->dateTime()
                     ->placeholder('-'),
@@ -98,7 +111,7 @@ class TenantInvitationResource extends Resource
             ->recordTitleAttribute('email')
             ->columns([
                 TextColumn::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->searchable(),
                 TextColumn::make('phone')
                     ->searchable(),
@@ -106,9 +119,8 @@ class TenantInvitationResource extends Resource
                     ->searchable(),
                 TextColumn::make('status')
                     ->searchable(),
-                TextColumn::make('invited_by')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('inviter.name')
+                    ->searchable(),
                 TextColumn::make('accepted_at')
                     ->dateTime()
                     ->sortable(),

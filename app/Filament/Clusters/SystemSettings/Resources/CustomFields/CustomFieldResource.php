@@ -5,12 +5,14 @@ namespace App\Filament\Clusters\SystemSettings\Resources\CustomFields;
 use App\Filament\Clusters\SystemSettings\Resources\CustomFields\Pages\ManageCustomFields;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Models\CustomField;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
@@ -46,10 +48,12 @@ class CustomFieldResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('model_type')
+                Select::make('model_type')
+                    ->options(CrmUi::options('target_type'))
                     ->required(),
                 TextInput::make('group_name'),
-                TextInput::make('type')
+                Select::make('type')
+                    ->options(CrmUi::options('custom_field.type'))
                     ->required(),
                 TextInput::make('identifier')
                     ->required(),

@@ -5,6 +5,7 @@ namespace App\Filament\Clusters\SalesProcess\Resources\SalesTargets;
 use App\Filament\Clusters\SalesProcess\Resources\SalesTargets\Pages\ManageSalesTargets;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
 use App\Models\SalesTarget;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -12,6 +13,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -44,12 +46,14 @@ class SalesTargetResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('target_type')
+                Select::make('target_type')
+                    ->options(CrmUi::options('target_type'))
                     ->required()
                     ->default('user'),
                 TextInput::make('target_id')
                     ->numeric(),
-                TextInput::make('period_type')
+                Select::make('period_type')
+                    ->options(CrmUi::options('period_type'))
                     ->required()
                     ->default('month'),
                 DatePicker::make('period_start')

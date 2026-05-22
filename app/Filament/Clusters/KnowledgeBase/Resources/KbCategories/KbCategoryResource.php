@@ -77,7 +77,7 @@ class KbCategoryResource extends Resource
                     ->visible(fn (KbCategory $record): bool => $record->trashed()),
                 TextEntry::make('name'),
                 TextEntry::make('parent.name')
-                    ->label('Parent')
+                    ->label('上级')
                     ->placeholder('-'),
                 TextEntry::make('sort_order')
                     ->numeric(),

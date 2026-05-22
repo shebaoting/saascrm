@@ -16,6 +16,7 @@ use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
@@ -57,11 +58,16 @@ class KbArticleResource extends Resource
                 Textarea::make('content')
                     ->required()
                     ->columnSpanFull(),
-                TextInput::make('kb_category_id')
-                    ->numeric(),
-                TextInput::make('user_id')
-                    ->numeric(),
-                TextInput::make('status')
+                Select::make('kb_category_id')
+                    ->relationship('category', 'name'),
+                Select::make('user_id')
+                    ->relationship('author', 'name'),
+                Select::make('status')
+                    ->options([
+                        'draft' => '草稿',
+                        'published' => '已发布',
+                        'archived' => '已归档',
+                    ])
                     ->required()
                     ->default('draft'),
                 DateTimePicker::make('published_at'),
@@ -84,11 +90,9 @@ class KbArticleResource extends Resource
                 TextEntry::make('title'),
                 TextEntry::make('content')
                     ->columnSpanFull(),
-                TextEntry::make('kb_category_id')
-                    ->numeric()
+                TextEntry::make('category.name')
                     ->placeholder('-'),
-                TextEntry::make('user_id')
-                    ->numeric()
+                TextEntry::make('author.name')
                     ->placeholder('-'),
                 TextEntry::make('status'),
                 TextEntry::make('published_at')
@@ -116,12 +120,10 @@ class KbArticleResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('title')
                     ->searchable(),
-                TextColumn::make('kb_category_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('user_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('category.name')
+                    ->searchable(),
+                TextColumn::make('author.name')
+                    ->searchable(),
                 TextColumn::make('status')
                     ->searchable(),
                 TextColumn::make('published_at')

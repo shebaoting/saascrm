@@ -5,6 +5,7 @@ namespace App\Filament\Clusters\OrderFinance\Resources\Payments;
 use App\Filament\Clusters\OrderFinance\OrderFinanceCluster;
 use App\Filament\Clusters\OrderFinance\Resources\Payments\Pages\ManagePayments;
 use App\Models\Payment;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -54,7 +55,7 @@ class PaymentResource extends Resource
         return $schema
             ->components([
                 Select::make('order_id')
-                    ->relationship('order', 'id')
+                    ->relationship('order', 'order_number')
                     ->required(),
                 DatePicker::make('plan_date'),
                 DateTimePicker::make('received_at'),
@@ -62,10 +63,12 @@ class PaymentResource extends Resource
                     ->required()
                     ->numeric()
                     ->default(0),
-                TextInput::make('status')
+                Select::make('status')
+                    ->options(CrmUi::options('payment.status'))
                     ->required()
                     ->default('pending'),
-                TextInput::make('payment_method'),
+                Select::make('payment_method')
+                    ->options(CrmUi::options('payment.method')),
                 TextInput::make('transaction_no'),
                 TextInput::make('notes'),
             ]);
@@ -84,8 +87,8 @@ class PaymentResource extends Resource
                 TextEntry::make('deleted_at')
                     ->dateTime()
                     ->visible(fn (Payment $record): bool => $record->trashed()),
-                TextEntry::make('order.id')
-                    ->label('Order'),
+                TextEntry::make('order.order_number')
+                    ->label('订单'),
                 TextEntry::make('plan_date')
                     ->date()
                     ->placeholder('-'),
@@ -121,7 +124,7 @@ class PaymentResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('order.id')
+                TextColumn::make('order.order_number')
                     ->searchable(),
                 TextColumn::make('plan_date')
                     ->date()

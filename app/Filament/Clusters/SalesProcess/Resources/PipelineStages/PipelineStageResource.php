@@ -5,6 +5,7 @@ namespace App\Filament\Clusters\SalesProcess\Resources\PipelineStages;
 use App\Filament\Clusters\SalesProcess\Resources\PipelineStages\Pages\ManagePipelineStages;
 use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
 use App\Models\PipelineStage;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -56,7 +57,8 @@ class PipelineStageResource extends Resource
                     ->required()
                     ->numeric()
                     ->default(0),
-                TextInput::make('stage_type')
+                Select::make('stage_type')
+                    ->options(CrmUi::options('pipeline.stage_type'))
                     ->required()
                     ->default('open'),
                 TextInput::make('required_fields'),
@@ -80,7 +82,7 @@ class PipelineStageResource extends Resource
                     ->dateTime()
                     ->placeholder('-'),
                 TextEntry::make('pipeline.name')
-                    ->label('Pipeline'),
+                    ->label('销售管道'),
                 TextEntry::make('name'),
                 TextEntry::make('probability')
                     ->numeric(),

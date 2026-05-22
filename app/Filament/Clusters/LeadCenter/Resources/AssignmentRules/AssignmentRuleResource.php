@@ -5,12 +5,15 @@ namespace App\Filament\Clusters\LeadCenter\Resources\AssignmentRules;
 use App\Filament\Clusters\LeadCenter\LeadCenterCluster;
 use App\Filament\Clusters\LeadCenter\Resources\AssignmentRules\Pages\ManageAssignmentRules;
 use App\Models\AssignmentRule;
+use App\Models\User;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
@@ -48,15 +51,19 @@ class AssignmentRuleResource extends Resource
             ->components([
                 TextInput::make('name')
                     ->required(),
-                TextInput::make('target_type')
+                Select::make('target_type')
+                    ->options(CrmUi::options('target_type'))
                     ->required()
                     ->default('lead'),
-                TextInput::make('method')
+                Select::make('method')
+                    ->options(CrmUi::options('assignment.method'))
                     ->required()
                     ->default('round_robin'),
-                TextInput::make('department_id')
-                    ->numeric(),
-                TextInput::make('user_ids'),
+                Select::make('department_id')
+                    ->relationship('department', 'name'),
+                Select::make('user_ids')
+                    ->multiple()
+                    ->options(fn (): array => User::query()->orderBy('name')->pluck('name', 'id')->all()),
                 TextInput::make('max_per_user_daily')
                     ->numeric(),
                 TextInput::make('priority')
@@ -81,8 +88,7 @@ class AssignmentRuleResource extends Resource
                 TextEntry::make('name'),
                 TextEntry::make('target_type'),
                 TextEntry::make('method'),
-                TextEntry::make('department_id')
-                    ->numeric()
+                TextEntry::make('department.name')
                     ->placeholder('-'),
                 TextEntry::make('max_per_user_daily')
                     ->numeric()
@@ -113,9 +119,8 @@ class AssignmentRuleResource extends Resource
                     ->searchable(),
                 TextColumn::make('method')
                     ->searchable(),
-                TextColumn::make('department_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('department.name')
+                    ->searchable(),
                 TextColumn::make('max_per_user_daily')
                     ->numeric()
                     ->sortable(),

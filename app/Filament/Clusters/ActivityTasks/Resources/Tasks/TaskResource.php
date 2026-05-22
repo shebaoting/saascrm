@@ -56,7 +56,7 @@ class TaskResource extends Resource
         return $schema
             ->components([
                 Select::make('lead_id')
-                    ->relationship('lead', 'id'),
+                    ->relationship('lead', 'company_name'),
                 Select::make('customer_id')
                     ->relationship('customer', 'name'),
                 Select::make('contact_id')
@@ -113,17 +113,17 @@ class TaskResource extends Resource
                 TextEntry::make('deleted_at')
                     ->dateTime()
                     ->visible(fn (Task $record): bool => $record->trashed()),
-                TextEntry::make('lead.id')
-                    ->label('Lead')
+                TextEntry::make('lead.company_name')
+                    ->label('线索')
                     ->placeholder('-'),
                 TextEntry::make('customer.name')
-                    ->label('Customer')
+                    ->label('客户')
                     ->placeholder('-'),
                 TextEntry::make('contact.name')
-                    ->label('Contact')
+                    ->label('联系人')
                     ->placeholder('-'),
                 TextEntry::make('opportunity.name')
-                    ->label('Opportunity')
+                    ->label('商机')
                     ->placeholder('-'),
                 TextEntry::make('title'),
                 TextEntry::make('description')
@@ -139,9 +139,9 @@ class TaskResource extends Resource
                     ->dateTime()
                     ->placeholder('-'),
                 TextEntry::make('creator.name')
-                    ->label('Creator'),
+                    ->label('创建人'),
                 TextEntry::make('assignee.name')
-                    ->label('Assignee'),
+                    ->label('负责人'),
                 TextEntry::make('status'),
                 TextEntry::make('priority'),
             ]);
@@ -164,7 +164,7 @@ class TaskResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('lead.id')
+                TextColumn::make('lead.company_name')
                     ->searchable(),
                 TextColumn::make('customer.name')
                     ->searchable(),

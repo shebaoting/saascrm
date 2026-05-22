@@ -8,6 +8,7 @@ use App\Models\Quote;
 use App\Services\Crm\QuoteCalculatorService;
 use App\Services\Crm\QuotePdfService;
 use App\Services\Crm\QuoteToOrderService;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -79,8 +80,8 @@ class QuoteResource extends Resource
                     ->relationship('creator', 'name')
                     ->default(fn (): ?int => auth()->id())
                     ->required(),
-                TextInput::make('price_book_id')
-                    ->numeric(),
+                Select::make('price_book_id')
+                    ->relationship('priceBook', 'name'),
                 TextInput::make('subtotal_amount')
                     ->required()
                     ->numeric()
@@ -110,7 +111,8 @@ class QuoteResource extends Resource
                     ->required()
                     ->numeric()
                     ->default(0),
-                TextInput::make('status')
+                Select::make('status')
+                    ->options(CrmUi::options('quote.status'))
                     ->required()
                     ->default('draft'),
                 DatePicker::make('valid_until'),
@@ -140,17 +142,15 @@ class QuoteResource extends Resource
                     ->numeric(),
                 TextEntry::make('title'),
                 TextEntry::make('customer.name')
-                    ->label('Customer'),
+                    ->label('客户'),
                 TextEntry::make('contact.name')
-                    ->label('Contact')
+                    ->label('联系人')
                     ->placeholder('-'),
                 TextEntry::make('opportunity.name')
-                    ->label('Opportunity')
+                    ->label('商机')
                     ->placeholder('-'),
-                TextEntry::make('user_id')
-                    ->numeric(),
-                TextEntry::make('price_book_id')
-                    ->numeric()
+                TextEntry::make('creator.name'),
+                TextEntry::make('priceBook.name')
                     ->placeholder('-'),
                 TextEntry::make('subtotal_amount')
                     ->numeric(),
@@ -211,12 +211,10 @@ class QuoteResource extends Resource
                     ->searchable(),
                 TextColumn::make('opportunity.name')
                     ->searchable(),
-                TextColumn::make('user_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('price_book_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('creator.name')
+                    ->searchable(),
+                TextColumn::make('priceBook.name')
+                    ->searchable(),
                 TextColumn::make('subtotal_amount')
                     ->numeric()
                     ->sortable(),

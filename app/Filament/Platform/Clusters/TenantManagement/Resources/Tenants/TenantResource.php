@@ -5,6 +5,7 @@ namespace App\Filament\Platform\Clusters\TenantManagement\Resources\Tenants;
 use App\Filament\Platform\Clusters\TenantManagement\Resources\Tenants\Pages\ManageTenants;
 use App\Filament\Platform\Clusters\TenantManagement\TenantManagementCluster;
 use App\Models\Tenant;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -16,6 +17,7 @@ use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -72,7 +74,8 @@ class TenantResource extends Resource
                 TextInput::make('contact_email')
                     ->email(),
                 TextInput::make('address'),
-                TextInput::make('status')
+                Select::make('status')
+                    ->options(CrmUi::options('tenant.status'))
                     ->required()
                     ->default('trial'),
                 DateTimePicker::make('trial_ends_at'),

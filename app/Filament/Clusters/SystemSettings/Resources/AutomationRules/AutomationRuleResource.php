@@ -5,6 +5,7 @@ namespace App\Filament\Clusters\SystemSettings\Resources\AutomationRules;
 use App\Filament\Clusters\SystemSettings\Resources\AutomationRules\Pages\ManageAutomationRules;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Models\AutomationRule;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -12,6 +13,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
@@ -49,9 +51,11 @@ class AutomationRuleResource extends Resource
             ->components([
                 TextInput::make('name')
                     ->required(),
-                TextInput::make('trigger_type')
+                Select::make('trigger_type')
+                    ->options(CrmUi::options('automation.trigger_type'))
                     ->required(),
-                TextInput::make('target_type')
+                Select::make('target_type')
+                    ->options(CrmUi::options('target_type'))
                     ->required(),
                 TextInput::make('conditions'),
                 Toggle::make('is_active')

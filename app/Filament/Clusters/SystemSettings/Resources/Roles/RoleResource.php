@@ -73,7 +73,7 @@ class RoleResource extends Resource
         return $schema
             ->components([
                 TextEntry::make('tenant.name')
-                    ->label('Tenant')
+                    ->label('租户')
                     ->placeholder('-'),
                 TextEntry::make('name'),
                 TextEntry::make('guard_name'),

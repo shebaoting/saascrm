@@ -5,6 +5,7 @@ namespace App\Filament\Clusters\ActivityTasks\Resources\Activities;
 use App\Filament\Clusters\ActivityTasks\ActivityTasksCluster;
 use App\Filament\Clusters\ActivityTasks\Resources\Activities\Pages\ManageActivities;
 use App\Models\Activity;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -54,17 +55,19 @@ class ActivityResource extends Resource
         return $schema
             ->components([
                 Select::make('lead_id')
-                    ->relationship('lead', 'id'),
+                    ->relationship('lead', 'company_name'),
                 Select::make('customer_id')
                     ->relationship('customer', 'name'),
                 Select::make('contact_id')
                     ->relationship('contact', 'name'),
                 Select::make('opportunity_id')
                     ->relationship('opportunity', 'name'),
-                TextInput::make('type')
+                Select::make('type')
+                    ->options(CrmUi::options('activity.type'))
                     ->required()
                     ->default('note'),
-                TextInput::make('direction'),
+                Select::make('direction')
+                    ->options(CrmUi::options('activity.direction')),
                 TextInput::make('subject'),
                 Textarea::make('content')
                     ->columnSpanFull(),
@@ -92,17 +95,17 @@ class ActivityResource extends Resource
                 TextEntry::make('deleted_at')
                     ->dateTime()
                     ->visible(fn (Activity $record): bool => $record->trashed()),
-                TextEntry::make('lead.id')
-                    ->label('Lead')
+                TextEntry::make('lead.company_name')
+                    ->label('线索')
                     ->placeholder('-'),
                 TextEntry::make('customer.name')
-                    ->label('Customer')
+                    ->label('客户')
                     ->placeholder('-'),
                 TextEntry::make('contact.name')
-                    ->label('Contact')
+                    ->label('联系人')
                     ->placeholder('-'),
                 TextEntry::make('opportunity.name')
-                    ->label('Opportunity')
+                    ->label('商机')
                     ->placeholder('-'),
                 TextEntry::make('type'),
                 TextEntry::make('direction')
@@ -119,8 +122,7 @@ class ActivityResource extends Resource
                 TextEntry::make('next_follow_at')
                     ->dateTime()
                     ->placeholder('-'),
-                TextEntry::make('owner_user_id')
-                    ->numeric(),
+                TextEntry::make('owner.name'),
             ]);
     }
 
@@ -141,7 +143,7 @@ class ActivityResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('lead.id')
+                TextColumn::make('lead.company_name')
                     ->searchable(),
                 TextColumn::make('customer.name')
                     ->searchable(),
@@ -163,9 +165,8 @@ class ActivityResource extends Resource
                 TextColumn::make('next_follow_at')
                     ->dateTime()
                     ->sortable(),
-                TextColumn::make('owner_user_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('owner.name')
+                    ->searchable(),
             ])
             ->filters([
                 TrashedFilter::make(),

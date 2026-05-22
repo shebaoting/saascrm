@@ -77,7 +77,7 @@ class DepartmentResource extends Resource
                     ->visible(fn (Department $record): bool => $record->trashed()),
                 TextEntry::make('name'),
                 TextEntry::make('parent.name')
-                    ->label('Parent')
+                    ->label('上级')
                     ->placeholder('-'),
                 TextEntry::make('sort_order')
                     ->numeric(),

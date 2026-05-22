@@ -5,6 +5,7 @@ namespace App\Filament\Clusters\CustomerCenter\Resources\Customers;
 use App\Filament\Clusters\CustomerCenter\CustomerCenterCluster;
 use App\Filament\Clusters\CustomerCenter\Resources\Customers\Pages\ManageCustomers;
 use App\Models\Customer;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -16,6 +17,7 @@ use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -54,20 +56,22 @@ class CustomerResource extends Resource
                 TextInput::make('name')
                     ->required(),
                 TextInput::make('short_name'),
-                TextInput::make('customer_type')
+                Select::make('customer_type')
+                    ->options(CrmUi::options('customer.customer_type'))
                     ->required()
                     ->default('company'),
-                TextInput::make('lifecycle_stage')
+                Select::make('lifecycle_stage')
+                    ->options(CrmUi::options('customer.lifecycle_stage'))
                     ->required()
                     ->default('new'),
-                TextInput::make('owner_user_id')
-                    ->numeric(),
+                Select::make('owner_user_id')
+                    ->relationship('owner', 'name'),
                 TextInput::make('source'),
                 TextInput::make('tags'),
                 TextInput::make('country_code'),
                 TextInput::make('area_id'),
                 TextInput::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->email(),
                 TextInput::make('phone')
                     ->tel(),
@@ -105,8 +109,7 @@ class CustomerResource extends Resource
                     ->placeholder('-'),
                 TextEntry::make('customer_type'),
                 TextEntry::make('lifecycle_stage'),
-                TextEntry::make('owner_user_id')
-                    ->numeric()
+                TextEntry::make('owner.name')
                     ->placeholder('-'),
                 TextEntry::make('source')
                     ->placeholder('-'),
@@ -115,7 +118,7 @@ class CustomerResource extends Resource
                 TextEntry::make('area_id')
                     ->placeholder('-'),
                 TextEntry::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->placeholder('-'),
                 TextEntry::make('phone')
                     ->placeholder('-'),
@@ -173,9 +176,8 @@ class CustomerResource extends Resource
                     ->searchable(),
                 TextColumn::make('lifecycle_stage')
                     ->searchable(),
-                TextColumn::make('owner_user_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('owner.name')
+                    ->searchable(),
                 TextColumn::make('source')
                     ->searchable(),
                 TextColumn::make('country_code')
@@ -183,7 +185,7 @@ class CustomerResource extends Resource
                 TextColumn::make('area_id')
                     ->searchable(),
                 TextColumn::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->searchable(),
                 TextColumn::make('phone')
                     ->searchable(),

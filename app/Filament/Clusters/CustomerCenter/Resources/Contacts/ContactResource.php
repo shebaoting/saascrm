@@ -5,6 +5,7 @@ namespace App\Filament\Clusters\CustomerCenter\Resources\Contacts;
 use App\Filament\Clusters\CustomerCenter\CustomerCenterCluster;
 use App\Filament\Clusters\CustomerCenter\Resources\Contacts\Pages\ManageContacts;
 use App\Models\Contact;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -62,10 +63,11 @@ class ContactResource extends Resource
                 TextInput::make('phone')
                     ->tel(),
                 TextInput::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->email(),
                 TextInput::make('wechat_id'),
-                TextInput::make('gender'),
+                Select::make('gender')
+                    ->options(CrmUi::options('gender')),
                 TextInput::make('position'),
                 TextInput::make('department'),
                 TextInput::make('avatar'),
@@ -89,12 +91,12 @@ class ContactResource extends Resource
                     ->dateTime()
                     ->visible(fn (Contact $record): bool => $record->trashed()),
                 TextEntry::make('customer.name')
-                    ->label('Customer'),
+                    ->label('客户'),
                 TextEntry::make('name'),
                 TextEntry::make('phone')
                     ->placeholder('-'),
                 TextEntry::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->placeholder('-'),
                 TextEntry::make('wechat_id')
                     ->placeholder('-'),
@@ -135,7 +137,7 @@ class ContactResource extends Resource
                 TextColumn::make('phone')
                     ->searchable(),
                 TextColumn::make('email')
-                    ->label('Email address')
+                    ->label('邮箱')
                     ->searchable(),
                 TextColumn::make('wechat_id')
                     ->searchable(),

@@ -11,6 +11,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -35,6 +36,8 @@ class MergeHistoryResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $cluster = SystemSettingsCluster::class;
 
     protected static ?string $recordTitleAttribute = 'model_type';
@@ -53,9 +56,9 @@ class MergeHistoryResource extends Resource
                     ->numeric(),
                 TextInput::make('merged_fields'),
                 TextInput::make('merged_relations'),
-                TextInput::make('merged_by')
-                    ->required()
-                    ->numeric(),
+                Select::make('merged_by')
+                    ->relationship('mergedBy', 'name')
+                    ->required(),
             ]);
     }
 
@@ -68,8 +71,7 @@ class MergeHistoryResource extends Resource
                     ->numeric(),
                 TextEntry::make('target_id')
                     ->numeric(),
-                TextEntry::make('merged_by')
-                    ->numeric(),
+                TextEntry::make('mergedBy.name'),
                 TextEntry::make('created_at')
                     ->dateTime()
                     ->placeholder('-'),
@@ -89,9 +91,8 @@ class MergeHistoryResource extends Resource
                 TextColumn::make('target_id')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('merged_by')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('mergedBy.name')
+                    ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

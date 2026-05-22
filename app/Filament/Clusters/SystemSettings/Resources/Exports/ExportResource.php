@@ -12,6 +12,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -35,6 +36,8 @@ class ExportResource extends Resource
     protected static ?string $title = '导出任务';
 
     protected static bool $hasTitleCaseModelLabel = false;
+
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $cluster = SystemSettingsCluster::class;
 
@@ -63,9 +66,9 @@ class ExportResource extends Resource
                     ->required()
                     ->numeric()
                     ->default(0),
-                TextInput::make('user_id')
-                    ->required()
-                    ->numeric(),
+                Select::make('user_id')
+                    ->relationship('user', 'name')
+                    ->required(),
             ]);
     }
 
@@ -92,8 +95,7 @@ class ExportResource extends Resource
                     ->numeric(),
                 TextEntry::make('successful_rows')
                     ->numeric(),
-                TextEntry::make('user_id')
-                    ->numeric(),
+                TextEntry::make('user.name'),
             ]);
     }
 
@@ -128,9 +130,8 @@ class ExportResource extends Resource
                 TextColumn::make('successful_rows')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('user_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('user.name')
+                    ->searchable(),
             ])
             ->filters([
                 //

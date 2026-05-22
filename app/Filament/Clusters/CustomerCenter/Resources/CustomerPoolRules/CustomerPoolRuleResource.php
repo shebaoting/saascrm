@@ -5,12 +5,15 @@ namespace App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolRules;
 use App\Filament\Clusters\CustomerCenter\CustomerCenterCluster;
 use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolRules\Pages\ManageCustomerPoolRules;
 use App\Models\CustomerPoolRule;
+use App\Models\Department;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
@@ -46,7 +49,8 @@ class CustomerPoolRuleResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('target_type')
+                Select::make('target_type')
+                    ->options(CrmUi::options('target_type'))
                     ->required(),
                 TextInput::make('name')
                     ->required(),
@@ -60,7 +64,9 @@ class CustomerPoolRuleResource extends Resource
                     ->default(7),
                 TextInput::make('max_claim_daily')
                     ->numeric(),
-                TextInput::make('department_ids'),
+                Select::make('department_ids')
+                    ->multiple()
+                    ->options(fn (): array => Department::query()->orderBy('name')->pluck('name', 'id')->all()),
                 Toggle::make('is_active')
                     ->required(),
             ]);

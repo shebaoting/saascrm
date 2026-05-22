@@ -5,12 +5,14 @@ namespace App\Filament\Clusters\SystemSettings\Resources\AutomationActions;
 use App\Filament\Clusters\SystemSettings\Resources\AutomationActions\Pages\ManageAutomationActions;
 use App\Filament\Clusters\SystemSettings\SystemSettingsCluster;
 use App\Models\AutomationAction;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -35,6 +37,8 @@ class AutomationActionResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $cluster = SystemSettingsCluster::class;
 
     protected static ?string $recordTitleAttribute = 'action_type';
@@ -43,10 +47,11 @@ class AutomationActionResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('automation_rule_id')
-                    ->required()
-                    ->numeric(),
-                TextInput::make('action_type')
+                Select::make('automation_rule_id')
+                    ->relationship('rule', 'name')
+                    ->required(),
+                Select::make('action_type')
+                    ->options(CrmUi::options('automation.action_type'))
                     ->required(),
                 TextInput::make('payload'),
                 TextInput::make('sort_order')
@@ -66,8 +71,7 @@ class AutomationActionResource extends Resource
                 TextEntry::make('updated_at')
                     ->dateTime()
                     ->placeholder('-'),
-                TextEntry::make('automation_rule_id')
-                    ->numeric(),
+                TextEntry::make('rule.name'),
                 TextEntry::make('action_type'),
                 TextEntry::make('sort_order')
                     ->numeric(),
@@ -87,9 +91,8 @@ class AutomationActionResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('automation_rule_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('rule.name')
+                    ->searchable(),
                 TextColumn::make('action_type')
                     ->searchable(),
                 TextColumn::make('sort_order')

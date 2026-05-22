@@ -96,7 +96,7 @@ class ProductSkuResource extends Resource
                     ->dateTime()
                     ->visible(fn (ProductSku $record): bool => $record->trashed()),
                 TextEntry::make('product.name')
-                    ->label('Product'),
+                    ->label('商品'),
                 TextEntry::make('sku_code'),
                 TextEntry::make('price')
                     ->money(),

@@ -7,6 +7,7 @@ use App\Filament\Clusters\SalesProcess\SalesProcessCluster;
 use App\Models\Opportunity;
 use App\Models\PipelineStage;
 use App\Services\Crm\OpportunityStageService;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -80,7 +81,8 @@ class OpportunityResource extends Resource
                     ->required()
                     ->numeric()
                     ->default(0),
-                TextInput::make('forecast_category')
+                Select::make('forecast_category')
+                    ->options(CrmUi::options('forecast_category'))
                     ->required()
                     ->default('pipeline'),
                 DatePicker::make('expected_close_date'),
@@ -110,14 +112,13 @@ class OpportunityResource extends Resource
                     ->dateTime()
                     ->visible(fn (Opportunity $record): bool => $record->trashed()),
                 TextEntry::make('customer.name')
-                    ->label('Customer'),
+                    ->label('客户'),
                 TextEntry::make('contact.name')
-                    ->label('Contact')
+                    ->label('联系人')
                     ->placeholder('-'),
                 TextEntry::make('pipeline.name')
-                    ->label('Pipeline'),
-                TextEntry::make('pipeline_stage_id')
-                    ->numeric(),
+                    ->label('销售管道'),
+                TextEntry::make('stage.name'),
                 TextEntry::make('name'),
                 TextEntry::make('amount')
                     ->numeric(),
@@ -130,8 +131,7 @@ class OpportunityResource extends Resource
                 TextEntry::make('expected_close_date')
                     ->date()
                     ->placeholder('-'),
-                TextEntry::make('responsible_user_id')
-                    ->numeric()
+                TextEntry::make('responsible.name')
                     ->placeholder('-'),
                 TextEntry::make('closed_at')
                     ->dateTime()
@@ -175,9 +175,8 @@ class OpportunityResource extends Resource
                     ->searchable(),
                 TextColumn::make('pipeline.name')
                     ->searchable(),
-                TextColumn::make('pipeline_stage_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('stage.name')
+                    ->searchable(),
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('amount')
@@ -194,9 +193,8 @@ class OpportunityResource extends Resource
                 TextColumn::make('expected_close_date')
                     ->date()
                     ->sortable(),
-                TextColumn::make('responsible_user_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('responsible.name')
+                    ->searchable(),
                 TextColumn::make('closed_at')
                     ->dateTime()
                     ->sortable(),

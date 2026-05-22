@@ -5,6 +5,7 @@ namespace App\Filament\Clusters\OrderFinance\Resources\OrderExpenses;
 use App\Filament\Clusters\OrderFinance\OrderFinanceCluster;
 use App\Filament\Clusters\OrderFinance\Resources\OrderExpenses\Pages\ManageOrderExpenses;
 use App\Models\OrderExpense;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -54,7 +55,7 @@ class OrderExpenseResource extends Resource
         return $schema
             ->components([
                 Select::make('order_id')
-                    ->relationship('order', 'id')
+                    ->relationship('order', 'order_number')
                     ->required(),
                 DatePicker::make('expense_date')
                     ->required(),
@@ -65,11 +66,12 @@ class OrderExpenseResource extends Resource
                 TextInput::make('category'),
                 TextInput::make('reason')
                     ->required(),
-                TextInput::make('status')
+                Select::make('status')
+                    ->options(CrmUi::options('order_expense.status'))
                     ->required()
                     ->default('pending'),
-                TextInput::make('approved_by')
-                    ->numeric(),
+                Select::make('approved_by')
+                    ->relationship('approvedBy', 'name'),
                 DateTimePicker::make('approved_at'),
             ]);
     }
@@ -87,8 +89,8 @@ class OrderExpenseResource extends Resource
                 TextEntry::make('deleted_at')
                     ->dateTime()
                     ->visible(fn (OrderExpense $record): bool => $record->trashed()),
-                TextEntry::make('order.id')
-                    ->label('Order'),
+                TextEntry::make('order.order_number')
+                    ->label('订单'),
                 TextEntry::make('expense_date')
                     ->date(),
                 TextEntry::make('amount')
@@ -97,8 +99,7 @@ class OrderExpenseResource extends Resource
                     ->placeholder('-'),
                 TextEntry::make('reason'),
                 TextEntry::make('status'),
-                TextEntry::make('approved_by')
-                    ->numeric()
+                TextEntry::make('approvedBy.name')
                     ->placeholder('-'),
                 TextEntry::make('approved_at')
                     ->dateTime()
@@ -123,7 +124,7 @@ class OrderExpenseResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('order.id')
+                TextColumn::make('order.order_number')
                     ->searchable(),
                 TextColumn::make('expense_date')
                     ->date()
@@ -137,9 +138,8 @@ class OrderExpenseResource extends Resource
                     ->searchable(),
                 TextColumn::make('status')
                     ->searchable(),
-                TextColumn::make('approved_by')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('approvedBy.name')
+                    ->searchable(),
                 TextColumn::make('approved_at')
                     ->dateTime()
                     ->sortable(),

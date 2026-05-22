@@ -37,6 +37,8 @@ class PriceBookItemResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $cluster = ProductPricingCluster::class;
 
     protected static ?string $recordTitleAttribute = 'price';
@@ -48,9 +50,9 @@ class PriceBookItemResource extends Resource
                 Select::make('price_book_id')
                     ->relationship('priceBook', 'name')
                     ->required(),
-                TextInput::make('product_sku_id')
-                    ->required()
-                    ->numeric(),
+                Select::make('product_sku_id')
+                    ->relationship('sku', 'sku_code')
+                    ->required(),
                 TextInput::make('price')
                     ->required()
                     ->numeric()
@@ -75,9 +77,8 @@ class PriceBookItemResource extends Resource
                     ->dateTime()
                     ->placeholder('-'),
                 TextEntry::make('priceBook.name')
-                    ->label('Price book'),
-                TextEntry::make('product_sku_id')
-                    ->numeric(),
+                    ->label('价格表'),
+                TextEntry::make('sku.sku_code'),
                 TextEntry::make('price')
                     ->money(),
                 TextEntry::make('min_price')
@@ -107,9 +108,8 @@ class PriceBookItemResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('priceBook.name')
                     ->searchable(),
-                TextColumn::make('product_sku_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('sku.sku_code')
+                    ->searchable(),
                 TextColumn::make('price')
                     ->money()
                     ->sortable(),

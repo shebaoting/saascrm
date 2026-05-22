@@ -5,12 +5,14 @@ namespace App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories;
 use App\Filament\Clusters\CustomerCenter\CustomerCenterCluster;
 use App\Filament\Clusters\CustomerCenter\Resources\CustomerPoolHistories\Pages\ManageCustomerPoolHistories;
 use App\Models\CustomerPoolHistory;
+use App\Support\Filament\CrmUi;
 use BackedEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -35,6 +37,8 @@ class CustomerPoolHistoryResource extends Resource
 
     protected static bool $hasTitleCaseModelLabel = false;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static ?string $cluster = CustomerCenterCluster::class;
 
     protected static ?string $recordTitleAttribute = 'target_type';
@@ -43,20 +47,27 @@ class CustomerPoolHistoryResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('target_type')
+                Select::make('target_type')
+                    ->options(CrmUi::options('target_type'))
                     ->required(),
                 TextInput::make('target_id')
                     ->required()
                     ->numeric(),
-                TextInput::make('action')
+                Select::make('action')
+                    ->options([
+                        'claim' => '领取',
+                        'release' => '释放',
+                        'transfer' => '转移',
+                        'auto_recycle' => '自动回收',
+                    ])
                     ->required(),
-                TextInput::make('from_user_id')
-                    ->numeric(),
-                TextInput::make('to_user_id')
-                    ->numeric(),
+                Select::make('from_user_id')
+                    ->relationship('fromUser', 'name'),
+                Select::make('to_user_id')
+                    ->relationship('toUser', 'name'),
                 TextInput::make('reason'),
-                TextInput::make('operated_by')
-                    ->numeric(),
+                Select::make('operated_by')
+                    ->relationship('operatorUser', 'name'),
             ]);
     }
 
@@ -68,16 +79,13 @@ class CustomerPoolHistoryResource extends Resource
                 TextEntry::make('target_id')
                     ->numeric(),
                 TextEntry::make('action'),
-                TextEntry::make('from_user_id')
-                    ->numeric()
+                TextEntry::make('fromUser.name')
                     ->placeholder('-'),
-                TextEntry::make('to_user_id')
-                    ->numeric()
+                TextEntry::make('toUser.name')
                     ->placeholder('-'),
                 TextEntry::make('reason')
                     ->placeholder('-'),
-                TextEntry::make('operated_by')
-                    ->numeric()
+                TextEntry::make('operatorUser.name')
                     ->placeholder('-'),
                 TextEntry::make('created_at')
                     ->dateTime()
@@ -97,17 +105,14 @@ class CustomerPoolHistoryResource extends Resource
                     ->sortable(),
                 TextColumn::make('action')
                     ->searchable(),
-                TextColumn::make('from_user_id')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('to_user_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('fromUser.name')
+                    ->searchable(),
+                TextColumn::make('toUser.name')
+                    ->searchable(),
                 TextColumn::make('reason')
                     ->searchable(),
-                TextColumn::make('operated_by')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('operatorUser.name')
+                    ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
